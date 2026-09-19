@@ -2,12 +2,12 @@ from cadgen import build123d as bd
 from cadgen import step
 
 from lib.canister import (
-    BACK_KNUCKLE_SEGMENTS,
     FRONT_KNUCKLE_SEGMENTS,
     dispense_slot,
     dome_cap,
     half_shell,
-    hinge_features,
+    hinge_channel,
+    hinge_knuckles,
     latch_tabs,
 )
 
@@ -16,8 +16,8 @@ from lib.canister import (
 def canister_front():
     body = half_shell(front=True)
 
-    knuckles_add, knuckles_cut = hinge_features(FRONT_KNUCKLE_SEGMENTS, BACK_KNUCKLE_SEGMENTS)
-    body = body + knuckles_add - knuckles_cut
+    body = body - hinge_channel()
+    body = body + hinge_knuckles(FRONT_KNUCKLE_SEGMENTS)
 
     body = body + latch_tabs()
 

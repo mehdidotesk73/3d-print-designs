@@ -60,7 +60,6 @@ def _pack_alternating_segments(
 
 # Hinge (edge at X=+R_OUT), pin parallel to Z
 KNUCKLE_R = 4.0
-KNUCKLE_CLEARANCE_R = 4.3
 PIN_D = 3.0
 PIN_R = PIN_D / 2 + 0.1  # 3.2mm bore for a 3mm pin
 PIN_MARGIN = 1.0  # pin protrudes this far past the knuckle span on each end
@@ -70,6 +69,9 @@ KNUCKLE_GAP = 1.25
 BACK_KNUCKLE_SEGMENTS, FRONT_KNUCKLE_SEGMENTS = _pack_alternating_segments(
     LENGTH, END_MARGIN, KNUCKLE_W, KNUCKLE_GAP
 )
+_ALL_KNUCKLE_SEGMENTS = BACK_KNUCKLE_SEGMENTS + FRONT_KNUCKLE_SEGMENTS
+HINGE_Z_MIN = min(z0 for z0, _ in _ALL_KNUCKLE_SEGMENTS)
+HINGE_Z_MAX = max(z1 for _, z1 in _ALL_KNUCKLE_SEGMENTS)
 
 # Wall mounting bosses (back only, at apex X=0, Y=-R_OUT)
 MOUNT_HOLE_D = 4.5
@@ -120,36 +122,42 @@ def _y_cylinder(radius: float, height: float, x: float, y0: float, z: float) -> 
     return bd.Pos(x, y0, z) * cyl
 
 
-def hinge_features(own_segments: list[tuple[float, float]], other_segments: list[tuple[float, float]]) -> tuple[bd.Shape, bd.Shape]:
-    """Returns (bosses_with_bores_to_add, clearance_to_cut) for one leaf's hinge edge."""
+# The pin (and its bore) run slightly past the knuckle segments themselves,
+# so both the body-level channel and the knuckle bore must share this exact
+# extended span -- otherwise the pin's overhang pokes into untouched plain
+# wall just past the knuckle row.
+PIN_BORE_Z0 = HINGE_Z_MIN - PIN_MARGIN - 0.5
+PIN_BORE_Z1 = HINGE_Z_MAX + PIN_MARGIN + 0.5
+
+
+def hinge_channel() -> bd.Shape:
+    """The hinge placemaker: a single solid cylinder at hinge diameter,
+    spanning the full hinge length, aligned on the hinge edge. Subtracted
+    from BOTH leaves first, so every point along the hinge line -- knuckle
+    or gap -- starts out equally clear. Leaves are then rebuilt only where
+    they actually have a knuckle (see hinge_knuckles), so there's no
+    leftover sliver of plain wall anywhere along the channel to pinch the
+    pin or interfere with the other leaf's knuckles. A thinner PIN_R
+    extension covers the pin's overhang past the knuckle row itself.
+    """
+    main = _z_cylinder(KNUCKLE_R, HINGE_Z_MAX - HINGE_Z_MIN, R_OUT, 0.0, HINGE_Z_MIN)
+    ext = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, R_OUT, 0.0, PIN_BORE_Z0)
+    return main + ext
+
+
+def hinge_knuckles(segments: list[tuple[float, float]]) -> bd.Shape:
+    """One leaf's knuckle bosses (its half of the alternating list), each a
+    slice of the hinge placemaker re-added after hinge_channel() cleared it,
+    with a single continuous pin bore run through the whole hinge span so
+    every knuckle -- on either leaf -- shares one unbroken through-bore.
+    """
     add = None
-    for z0, z1 in own_segments:
-        h = z1 - z0
-        boss = _z_cylinder(KNUCKLE_R, h, R_OUT, 0.0, z0)
-        bore = _z_cylinder(PIN_R, h + 1.0, R_OUT, 0.0, z0 - 0.5)
-        piece = boss - bore
-        add = piece if add is None else add + piece
+    for z0, z1 in segments:
+        boss = _z_cylinder(KNUCKLE_R, z1 - z0, R_OUT, 0.0, z0)
+        add = boss if add is None else add + boss
 
-    cut = None
-    for z0, z1 in other_segments:
-        h = z1 - z0
-        piece = _z_cylinder(KNUCKLE_CLEARANCE_R, h, R_OUT, 0.0, z0)
-        cut = piece if cut is None else cut + piece
-
-    # The plain wall edge between knuckle segments still reaches X=R_OUT,Y=0
-    # (the small KNUCKLE_GAP slivers aren't covered by either the boss bore
-    # above or the other leaf's clearance cut), which would pinch the pin.
-    # Cut a continuous PIN_R channel across the whole hinge span on both
-    # leaves so the pin has clearance everywhere it passes, not just inside
-    # the discrete knuckle segments. Extend it by PIN_MARGIN (plus a hair)
-    # past the segments themselves, matching how far the pin overhangs them.
-    all_segments = own_segments + other_segments
-    span_z0 = min(s[0] for s in all_segments) - PIN_MARGIN - 0.5
-    span_z1 = max(s[1] for s in all_segments) + PIN_MARGIN + 0.5
-    channel = _z_cylinder(PIN_R, span_z1 - span_z0, R_OUT, 0.0, span_z0)
-    cut = channel if cut is None else cut + channel
-
-    return add, cut
+    bore = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, R_OUT, 0.0, PIN_BORE_Z0)
+    return add - bore
 
 
 def mount_features() -> tuple[bd.Shape, bd.Shape]:
@@ -239,17 +247,18 @@ def dispense_slot() -> bd.Shape:
 
 
 def dome_cap(front: bool, at_bottom: bool) -> bd.Shape:
-    """A quarter-sphere end cap for one leaf at one end of the tube.
+    """A hollow quarter-dome end cap for one leaf at one end of the tube.
 
-    Radius matches R_OUT, so the two leaves' quarter-domes meet flush and,
-    once closed, the two Z-ends of the assembly each read as a true
-    hemisphere. Solid (not hollow): it seals the cavity's ends rather than
-    continuing the bore into the dome.
+    Radii match R_OUT/R_IN, so the two leaves' quarter-domes meet flush
+    with each other AND with the main shell's own wall thickness -- once
+    closed, the two Z-ends of the assembly each read as a true hollow
+    hemisphere continuing the same WALL-thick shell as the cylindrical
+    mid-section, not a solid plug.
     """
     z_end = 0.0 if at_bottom else LENGTH
     pad = R_OUT + 10.0
 
-    sphere = bd.Pos(0.0, 0.0, z_end) * bd.Sphere(R_OUT)
+    shell = bd.Pos(0.0, 0.0, z_end) * (bd.Sphere(R_OUT) - bd.Sphere(R_IN))
 
     y_align = bd.Align.MIN if front else bd.Align.MAX
     y_box = bd.Pos(0.0, 0.0, z_end) * bd.Box(
@@ -261,4 +270,4 @@ def dome_cap(front: bool, at_bottom: bool) -> bd.Shape:
         2.0 * pad, 2.0 * pad, pad, align=(bd.Align.CENTER, bd.Align.CENTER, z_align)
     )
 
-    return sphere & y_box & z_box
+    return shell & y_box & z_box

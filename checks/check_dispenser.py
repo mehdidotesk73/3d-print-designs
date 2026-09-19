@@ -18,7 +18,9 @@ from cadgen.geometry import (
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from lib.canister import (  # noqa: E402
+    BACK_KNUCKLE_SEGMENTS,
     END_MARGIN,
+    FRONT_KNUCKLE_SEGMENTS,
     KNUCKLE_R,
     LENGTH,
     MOUNT_HOLE_D,
@@ -219,26 +221,53 @@ def main() -> None:
         f"safe range=[{END_MARGIN}, {LENGTH - END_MARGIN}]",
     )
 
-    # Dome caps: each half's quarter-dome should seal its end (a point deep in
-    # the dome, past the original cylindrical end, must be solid) without
-    # reaching past the sphere's radius (a point further out must be empty).
+    # Dome caps: each half's quarter-dome should be a hollow WALL-thick shell,
+    # matching the main cylinder -- solid between R_IN and R_OUT, empty
+    # inside R_IN (continuing the cavity), and empty past R_OUT.
     for solid, is_front, name in [(back_solid, False, "back"), (front_solid, True, "front")]:
         y_sign = 1.0 if is_front else -1.0
         for at_bottom, z_end in [(True, 0.0), (False, LENGTH)]:
             z_dir = -1.0 if at_bottom else 1.0
-            inside_pt = (0.0, y_sign * 10.0, z_end + z_dir * (R_OUT - 5.0))
+            hollow_pt = (0.0, y_sign * 10.0, z_end + z_dir * 15.0)  # dist ~18mm < R_IN=22
+            wall_pt = (0.0, y_sign * 10.0, z_end + z_dir * (R_OUT - 5.0))  # dist ~22.4, in [R_IN,R_OUT]
             outside_pt = (0.0, y_sign * 10.0, z_end + z_dir * (R_OUT + 5.0))
             label = f"{name} dome at z_end={z_end}"
             check(
-                f"{label}: sealed (point inside the dome is solid)",
-                solid.is_inside(inside_pt),
-                f"point {inside_pt} inside solid = {solid.is_inside(inside_pt)} (expect True)",
+                f"{label}: hollow (point inside R_IN continues the cavity)",
+                not solid.is_inside(hollow_pt),
+                f"point {hollow_pt} inside solid = {solid.is_inside(hollow_pt)} (expect False)",
+            )
+            check(
+                f"{label}: shell wall (point between R_IN and R_OUT is solid)",
+                solid.is_inside(wall_pt),
+                f"point {wall_pt} inside solid = {solid.is_inside(wall_pt)} (expect True)",
             )
             check(
                 f"{label}: bounded (point past the dome radius is empty)",
                 not solid.is_inside(outside_pt),
                 f"point {outside_pt} inside solid = {solid.is_inside(outside_pt)} (expect False)",
             )
+
+    # Hinge gaps: at the midpoint between consecutive knuckle segments (owned
+    # by neither leaf), BOTH leaves must be clear right out to KNUCKLE_R --
+    # the exact "leftover plain wall" bug the placemaker-channel rebuild
+    # fixes. A point at KNUCKLE_R-1 on the hinge axis there must be empty
+    # on both back and front.
+    ordered = sorted(BACK_KNUCKLE_SEGMENTS + FRONT_KNUCKLE_SEGMENTS)
+    gap_mids = [(ordered[i][1] + ordered[i + 1][0]) / 2.0 for i in range(len(ordered) - 1)]
+    for z in gap_mids:
+        probe_back = (R_OUT, -(KNUCKLE_R - 1.0), z)
+        probe_front = (R_OUT, KNUCKLE_R - 1.0, z)
+        check(
+            f"hinge gap at z={z:.3f} clear on back",
+            not back_solid.is_inside(probe_back),
+            f"point {probe_back} inside back = {back_solid.is_inside(probe_back)} (expect False)",
+        )
+        check(
+            f"hinge gap at z={z:.3f} clear on front",
+            not front_solid.is_inside(probe_front),
+            f"point {probe_front} inside front = {front_solid.is_inside(probe_front)} (expect False)",
+        )
 
     # Closest approach between back and front at the hinge (should be ~0, they touch)
     hinge_contact = closest_points(back_solid, front_solid)

@@ -3,9 +3,9 @@
 Wall-mounted, 2-piece clamshell capsule. Cylinder axis is vertical; the
 back mounts directly to the wall with two screws, the front hinges open on
 one edge and snap-latches shut on the other, and has a dispensing slit.
-Each half also caps its own ends with a quarter-sphere dome, so the closed
-assembly reads as a cylindrical mid-section with a true hemisphere at
-each tip.
+Each half also caps its own ends with a hollow quarter-sphere dome (wall
+thickness matches the main shell), so the closed assembly reads as a
+cylindrical mid-section with a true hollow hemisphere at each tip.
 
 | Script | Output | Purpose |
 | --- | --- | --- |
@@ -27,10 +27,11 @@ sealing, and back/front/pin interference — all pass with zero overlap volume).
 - Mount holes: 2x M4.5 clearance, ~29mm apart, centered at the back's
   apex, clear of the domed ends, counterbored on the inside for the
   screw heads.
-- Hinge: interleaved knuckles (packed to fill the space between the domed
-  ends) bored for a 3mm pin; a continuous pin-clearance channel runs the
-  full hinge span so the pin doesn't catch on the small gaps between
-  knuckle segments.
+- Hinge: built as a placemaker channel (full hinge-diameter cylinder,
+  subtracted from both leaves first) with alternating knuckle segments
+  added back per leaf and a single continuous pin bore run through the
+  whole span -- so there's no leftover plain-wall sliver in the gaps
+  between knuckles on either leaf, and the through-bore is unbroken.
 - Latch: 2 cantilever snap tabs on the front, catching in windows cut
   through the back's wall.
 - Dispensing slit: 12mm x 40mm stadium slot on the front's outward face.

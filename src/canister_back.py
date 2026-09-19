@@ -3,10 +3,10 @@ from cadgen import step
 
 from lib.canister import (
     BACK_KNUCKLE_SEGMENTS,
-    FRONT_KNUCKLE_SEGMENTS,
     dome_cap,
     half_shell,
-    hinge_features,
+    hinge_channel,
+    hinge_knuckles,
     latch_windows,
     mount_features,
 )
@@ -16,8 +16,8 @@ from lib.canister import (
 def canister_back():
     body = half_shell(front=False)
 
-    knuckles_add, knuckles_cut = hinge_features(BACK_KNUCKLE_SEGMENTS, FRONT_KNUCKLE_SEGMENTS)
-    body = body + knuckles_add - knuckles_cut
+    body = body - hinge_channel()
+    body = body + hinge_knuckles(BACK_KNUCKLE_SEGMENTS)
 
     mount_add, mount_cut = mount_features()
     body = body + mount_add - mount_cut
