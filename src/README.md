@@ -2,10 +2,11 @@
 
 Wall-mounted, 2-piece clamshell capsule. Cylinder axis is vertical; the
 back mounts directly to the wall with two screws, the front hinges open on
-an external tangent pivot and hook-latches shut, and has a dispensing
-slit. Each half also caps its own ends with a hollow quarter-sphere dome
-(wall thickness matches the main shell), so the closed assembly reads as
-a cylindrical mid-section with a true hollow hemisphere at each tip.
+a pivot offset from the parting edge and hook-latches shut, and has a
+dispensing slit. Each half also caps its own ends with a hollow
+quarter-sphere dome (wall thickness matches the main shell), so the closed
+assembly reads as a cylindrical mid-section with a true hollow hemisphere
+at each tip.
 
 | Script | Output | Purpose |
 | --- | --- | --- |
@@ -34,25 +35,37 @@ plain `cadgen step snapshot`.
 - Mount holes: 2x M4.5 clearance, ~29mm apart, centered at the back's
   apex, clear of the domed ends, counterbored on the inside for the
   screw heads.
-- Hinge: the pivot axis is external and tangent to the tube's OD (not
-  centered on the parting edge) -- `HINGE_AXIS_X = R_OUT + KNUCKLE_R -
-  HINGE_OVERLAP`, a small deliberate overlap rather than exact tangency,
-  which OCCT can't fillet. A centered/embedded pivot would leave the pin
-  bore fully enclosed once the dome caps exist, with nowhere to slide the
-  pin in from, and would make each leaf's body sweep back through the
-  pin's own space while swinging; the external placement fixes both.
-  Each knuckle is a FULL ROUND boss (a real hinge barrel, not sliced in
-  half at the parting plane): built from that leaf's own half-annulus
-  (matching wall thickness and half-plane elsewhere) unioned with an
-  unclipped knuckle circle. Only the near side (where the knuckle meets
-  this leaf's own wall) is filleted smooth -- that's a genuine junction.
-  The far side (facing the other leaf) is trimmed so it never dips inside
-  R_OUT in the first place, so it can never overlap the other leaf's
-  territory there; no compensating clearance cut on the other leaf is
-  needed, and back/front interference checks out at exactly zero volume.
-  Knuckles alternate between the two leaves (back gets segments 1,3,5...,
-  front gets 2,4...) with a single continuous pin bore run through the
-  whole span, open to free air past both ends of the knuckle row.
+- Hinge: a generic construction given an edge (the line the two leaves'
+  outer surfaces meet along, here the tube's own parting line at X=R_OUT)
+  and a hinge normal (perpendicular to the edge, bisecting the two outer
+  faces' angle there -- for this tube, just the outward radial direction).
+  1. **Generation**: slice the hinge's full-length bulk cylinder (radius
+     `KNUCKLE_R`) into knuckle segments (`_pack_alternating_segments`,
+     pushed apart by a gap for clearance), pierce all of them with a single
+     continuous pin bore.
+  2. **Placement**: each knuckle's own longitudinal axis starts on the
+     edge, then moves along the hinge normal by the pin bore radius --
+     `HINGE_AXIS_X = R_OUT + PIN_R`. Segments alternate between the two
+     leaves (back gets 1,3,5..., front gets 2,4...); each knuckle is a
+     plain FULL ROUND boss (not clipped to either leaf's half, like a real
+     hinge barrel), unioned onto its leaf. Because the axis sits so close
+     to the edge, every knuckle boss dips inward past R_OUT into the wall
+     band on **both** sides of the parting line, not just the side it's
+     unioned onto -- so `hinge_clearance()` notches the *other* leaf out
+     wherever this leaf has a knuckle (and vice versa), or the two leaves
+     would collide there.
+  3. **Reinforcement**: after a leaf's knuckles are unioned on and the
+     other leaf's clearance is cut, `reinforce_hinge()` fillets the seam
+     edge where the knuckle's own cylindrical face meets that leaf's own
+     outer wall face -- found by the two circles' (KNUCKLE_R at the axis,
+     R_OUT at the tube's own center) intersection, selecting the near-side
+     crossing per segment directly on the unioned solid's edges. Only the
+     near side is filleted; the far side has no wall of this leaf's own to
+     blend into (that's the other leaf's clearance pocket instead).
+
+  Checks confirm zero back/front interference and that both the notch and
+  fillet land exactly where computed. A single continuous pin bore spans
+  the whole hinge, open to free air past both ends of the knuckle row.
 - Latch: a cantilever hook on the front (2.5mm arm, 3.5mm asymmetric
   drop-hook catch) catches through a window cut in the back's wall. A
   single flex point (the hook's own arm) is the most durable arrangement

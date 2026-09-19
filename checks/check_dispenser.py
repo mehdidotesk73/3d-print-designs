@@ -22,7 +22,6 @@ from lib.canister import (  # noqa: E402
     END_MARGIN,
     FRONT_KNUCKLE_SEGMENTS,
     HINGE_AXIS_X,
-    HINGE_OVERLAP,
     HINGE_Z_MAX,
     HINGE_Z_MIN,
     KNUCKLE_R,
@@ -32,6 +31,7 @@ from lib.canister import (  # noqa: E402
     MOUNT_Z,
     PIN_BORE_Z0,
     PIN_BORE_Z1,
+    PIN_R,
     R_IN,
     R_OUT,
     ROLL_DIAMETER,
@@ -193,13 +193,12 @@ def main() -> None:
     check("slot length (design constant)", abs(SLOT_LEN - 40.0) < 1e-9, f"{SLOT_LEN} mm")
     check("slot width (design constant)", abs(SLOT_WIDTH - 12.0) < 1e-9, f"{SLOT_WIDTH} mm")
 
-    # Tangent hinge axis: consistent with R_OUT + KNUCKLE_R - HINGE_OVERLAP (a
-    # deliberate small overlap, not exact mathematical tangency -- see
-    # lib/canister.py for why exact tangency can't be filleted).
+    # Generic hinge placement formula: axis = edge (R_OUT, 0) + normal (1, 0)
+    # * pin bore radius -- see lib/canister.py.
     check(
-        "hinge axis matches the tangent-with-overlap formula",
-        abs(HINGE_AXIS_X - (R_OUT + KNUCKLE_R - HINGE_OVERLAP)) < 1e-9,
-        f"HINGE_AXIS_X={HINGE_AXIS_X}, R_OUT+KNUCKLE_R-HINGE_OVERLAP={R_OUT + KNUCKLE_R - HINGE_OVERLAP}",
+        "hinge axis matches the edge + normal*pin_radius formula",
+        abs(HINGE_AXIS_X - (R_OUT + PIN_R)) < 1e-9,
+        f"HINGE_AXIS_X={HINGE_AXIS_X}, R_OUT+PIN_R={R_OUT + PIN_R}",
     )
 
     # Latch: at each LATCH_Z, back's window is a through-opening and front's
@@ -337,6 +336,40 @@ def main() -> None:
             f"front knuckle at z={z:.3f} is full round (far side solid)",
             front_solid.is_inside(far_pt),
             f"point {far_pt} inside front = {front_solid.is_inside(far_pt)} (expect True)",
+        )
+
+    # The knuckle axis sits close enough to the parting edge that every
+    # knuckle boss dips inward past R_OUT into the wall band on BOTH sides
+    # of the parting line -- hinge_clearance() must notch the OTHER leaf out
+    # there, or the two leaves would collide. Probe a point inside that
+    # dip (on the axis, radially inward of HINGE_AXIS_X by most of
+    # KNUCKLE_R) at each leaf's own knuckle segments: this leaf should be
+    # solid there (its own knuckle), the other leaf must be empty (notched).
+    for z0, z1 in BACK_KNUCKLE_SEGMENTS:
+        z = (z0 + z1) / 2.0
+        dip_pt = (HINGE_AXIS_X - (KNUCKLE_R - 1.0), 0.0, z)
+        check(
+            f"back knuckle at z={z:.3f}: back solid in the inward dip",
+            back_solid.is_inside(dip_pt),
+            f"point {dip_pt} inside back = {back_solid.is_inside(dip_pt)} (expect True)",
+        )
+        check(
+            f"back knuckle at z={z:.3f}: front notched clear in the inward dip",
+            not front_solid.is_inside(dip_pt),
+            f"point {dip_pt} inside front = {front_solid.is_inside(dip_pt)} (expect False, hinge_clearance())",
+        )
+    for z0, z1 in FRONT_KNUCKLE_SEGMENTS:
+        z = (z0 + z1) / 2.0
+        dip_pt = (HINGE_AXIS_X - (KNUCKLE_R - 1.0), 0.0, z)
+        check(
+            f"front knuckle at z={z:.3f}: front solid in the inward dip",
+            front_solid.is_inside(dip_pt),
+            f"point {dip_pt} inside front = {front_solid.is_inside(dip_pt)} (expect True)",
+        )
+        check(
+            f"front knuckle at z={z:.3f}: back notched clear in the inward dip",
+            not back_solid.is_inside(dip_pt),
+            f"point {dip_pt} inside back = {back_solid.is_inside(dip_pt)} (expect False, hinge_clearance())",
         )
 
     # Closest approach between back and front at the hinge (should be ~0, they touch)
