@@ -82,15 +82,22 @@ MOUNT_BOSS_HEIGHT = 3.0
 _mount_usable = LENGTH - 2.0 * END_MARGIN
 MOUNT_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
 
-# Latch (edge at X=-R_OUT): front has snap tabs, back has receiving windows
+# Latch (edge at X=-R_OUT): a hook on the front catches through a window in
+# the back. Front's arm flexes in Y (its thin dimension); back's window is
+# a plain cut, not a separate flexing feature -- a single flex point is the
+# most durable arrangement for a hook that self-engages during the closing
+# swing (see latch_hooks() for why a fully rigid catch can't self-release
+# from pure rotation about a fixed pivot).
 LATCH_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
-TAB_WIDTH = 10.0
-TAB_THK = 1.8
-TAB_REACH = 6.0  # protrusion past the OD edge
-BARB_LEN = 2.0
-BARB_PROUD = 1.0  # each side beyond TAB_THK/2
-WINDOW_Z_MARGIN = 0.5  # window is 1mm wider than the tab
-WINDOW_Y_HALF = TAB_THK / 2 + BARB_PROUD - 0.3  # slight interference for snap retention
+HOOK_WIDTH = 12.0
+HOOK_ARM_THK = 2.5  # was TAB_THK=1.8 on the old cantilever -- thicker, sturdier arm
+HOOK_REACH = 6.0  # protrusion past the OD edge
+HOOK_CATCH_LEN = 3.0  # catch's inward hook length past the arm's own tip
+HOOK_CATCH_DROP = 2.2  # catch drops this far past the arm's bottom face -- asymmetric, one-sided
+HOOK_EMBED = 2.0  # extends the arm's base into the wall so it truly fuses, not just touches at an edge
+WINDOW_Z_MARGIN = 0.5  # window is 1mm wider than the hook
+WINDOW_Y_HIGH = HOOK_ARM_THK / 2.0 + 0.5  # clearance -- the arm just passes through here
+WINDOW_Y_LOW = -(HOOK_ARM_THK / 2.0 + HOOK_CATCH_DROP) + 0.3  # slight interference for snap retention
 
 # Dispensing slit (front apex X=0, Y=+R_OUT)
 SLOT_LEN = 40.0
@@ -123,40 +130,77 @@ def _y_cylinder(radius: float, height: float, x: float, y0: float, z: float) -> 
 
 
 # The pin (and its bore) run slightly past the knuckle segments themselves,
-# so both the body-level channel and the knuckle bore must share this exact
-# extended span -- otherwise the pin's overhang pokes into untouched plain
-# wall just past the knuckle row.
+# so the pin can be slid in/out without its overhang catching on anything
+# right at the ends of the knuckle row.
 PIN_BORE_Z0 = HINGE_Z_MIN - PIN_MARGIN - 0.5
 PIN_BORE_Z1 = HINGE_Z_MAX + PIN_MARGIN + 0.5
 
+# Hinge axis placement: NOT centered on the parting edge. A centered pin
+# bore is half-embedded in each leaf's own wall thickness, which (a) has no
+# opening to the outside once the dome caps exist -- the bore is a fully
+# enclosed channel with nowhere to slide the pin in from -- and (b) makes
+# each leaf's own body sweep back through the pin's own territory as it
+# swings, limiting rotation range. Placing the axis externally, tangent to
+# the tube's OD, fixes both: the knuckle bumps sit outside the tube's own
+# wall material entirely (nothing to embed the pin bore in beyond the
+# knuckle row itself, so it opens to free air at both ends of the row), and
+# neither leaf's main body ever sweeps back across the tangent point during
+# rotation. HINGE_OVERLAP is a small deliberate overlap (not exact
+# mathematical tangency, which produces a degenerate/self-touching profile
+# that OCCT can't fillet) so the knuckle boss has a genuine face to fuse
+# and fillet against, not just a tangent line.
+HINGE_OVERLAP = 1.0
+HINGE_AXIS_X = R_OUT + KNUCKLE_R - HINGE_OVERLAP
+HINGE_FILLET_R = 1.5
 
-def hinge_channel() -> bd.Shape:
-    """The hinge placemaker: a single solid cylinder at hinge diameter,
-    spanning the full hinge length, aligned on the hinge edge. Subtracted
-    from BOTH leaves first, so every point along the hinge line -- knuckle
-    or gap -- starts out equally clear. Leaves are then rebuilt only where
-    they actually have a knuckle (see hinge_knuckles), so there's no
-    leftover sliver of plain wall anywhere along the channel to pinch the
-    pin or interfere with the other leaf's knuckles. A thinner PIN_R
-    extension covers the pin's overhang past the knuckle row itself.
+_HINGE_IX = (R_OUT**2 - KNUCKLE_R**2 + HINGE_AXIS_X**2) / (2.0 * HINGE_AXIS_X)
+_HINGE_IY = (R_OUT**2 - _HINGE_IX**2) ** 0.5
+
+
+def _knuckle_profile(front: bool) -> bd.Shape:
+    """2D cross-section for one leaf's knuckle: the tube's own annulus
+    (matching wall thickness elsewhere) unioned with a knuckle-diameter
+    circle placed tangent to (with a small robust overlap into) the tube's
+    OD, filleted where the two meet so the knuckle blends smoothly into
+    the canister's outer surface instead of meeting it at a sharp
+    reentrant corner, then restricted to this leaf's own half so it can
+    never reach into the other leaf's territory.
     """
-    main = _z_cylinder(KNUCKLE_R, HINGE_Z_MAX - HINGE_Z_MIN, R_OUT, 0.0, HINGE_Z_MIN)
-    ext = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, R_OUT, 0.0, PIN_BORE_Z0)
-    return main + ext
+    annulus = bd.Circle(R_OUT) - bd.Circle(R_IN)
+    knuckle = bd.Pos(HINGE_AXIS_X, 0.0) * bd.Circle(KNUCKLE_R)
+    combined = annulus + knuckle
+
+    def _near(v, x: float, y: float, tol: float = 0.05) -> bool:
+        return abs(v.X - x) < tol and abs(v.Y - y) < tol
+
+    fillet_verts = [
+        v
+        for v in combined.vertices()
+        if _near(v, _HINGE_IX, _HINGE_IY) or _near(v, _HINGE_IX, -_HINGE_IY)
+    ]
+    combined = bd.fillet(fillet_verts, HINGE_FILLET_R)
+
+    pad = R_OUT + 10.0
+    align_y = bd.Align.MIN if front else bd.Align.MAX
+    rect = bd.Rectangle(2.0 * pad, pad, align=(bd.Align.CENTER, align_y))
+    return combined & rect
 
 
-def hinge_knuckles(segments: list[tuple[float, float]]) -> bd.Shape:
-    """One leaf's knuckle bosses (its half of the alternating list), each a
-    slice of the hinge placemaker re-added after hinge_channel() cleared it,
-    with a single continuous pin bore run through the whole hinge span so
-    every knuckle -- on either leaf -- shares one unbroken through-bore.
+def hinge_knuckles(front: bool, segments: list[tuple[float, float]]) -> bd.Shape:
+    """One leaf's knuckle bosses: its half of the alternating segment list,
+    each an extrusion of that leaf's own filleted knuckle profile, plus a
+    single continuous pin bore run through the whole hinge span (open at
+    both ends past the knuckle row, so the pin can be slid straight in
+    after the two leaves are brought together -- see HINGE_AXIS_X above).
     """
+    profile = _knuckle_profile(front)
     add = None
     for z0, z1 in segments:
-        boss = _z_cylinder(KNUCKLE_R, z1 - z0, R_OUT, 0.0, z0)
-        add = boss if add is None else add + boss
+        piece = bd.extrude(profile, amount=z1 - z0)
+        piece = bd.Pos(0.0, 0.0, z0) * piece
+        add = piece if add is None else add + piece
 
-    bore = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, R_OUT, 0.0, PIN_BORE_Z0)
+    bore = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, HINGE_AXIS_X, 0.0, PIN_BORE_Z0)
     return add - bore
 
 
@@ -183,38 +227,52 @@ def mount_features() -> tuple[bd.Shape, bd.Shape]:
     return add, cut
 
 
-TAB_EMBED = 2.0  # extends the tab base into the wall so it truly fuses, not just touches at an edge
+def _hook(z_center: float) -> bd.Shape:
+    """One hook: a cantilever arm (flexes in Y, its thin dimension) with an
+    asymmetric catch dropping further -Y at the tip. Box axes: X = radial
+    reach, Y = flex/catch direction, Z = axial width.
 
-
-def _tab(z_center: float) -> bd.Shape:
-    # Box axes: X = radial reach, Y = flex thickness (toward/away from the back), Z = axial width.
+    A single rigid hook can't self-release from a fixed-pivot rotation:
+    trace the latch edge's own arc as the leaf swings and the same path is
+    retraced in reverse to open, so a catch that blocks it one way blocks
+    it both ways unless something flexes momentarily. Putting that flex in
+    one sturdy, short cantilever arm (not the old thin blade) is the
+    durable version of that same necessity -- a true zero-flex hook would
+    need a second degree of freedom (axial slide, a separate release
+    action) rather than pure swing-to-close.
+    """
     x_outer = -R_OUT
-    blade_x_max = x_outer + TAB_EMBED
-    blade = bd.Box(TAB_REACH + TAB_EMBED, TAB_THK, TAB_WIDTH, align=(bd.Align.MAX, bd.Align.CENTER, bd.Align.CENTER))
-    blade = bd.Pos(blade_x_max, 0.0, z_center) * blade
+    blade_x_max = x_outer + HOOK_EMBED
+    arm = bd.Box(
+        HOOK_REACH + HOOK_EMBED, HOOK_ARM_THK, HOOK_WIDTH,
+        align=(bd.Align.MAX, bd.Align.CENTER, bd.Align.CENTER),
+    )
+    arm = bd.Pos(blade_x_max, 0.0, z_center) * arm
 
-    barb_thk = TAB_THK + 2.0 * BARB_PROUD
-    barb = bd.Box(BARB_LEN, barb_thk, TAB_WIDTH, align=(bd.Align.MAX, bd.Align.CENTER, bd.Align.CENTER))
-    barb = bd.Pos(x_outer - TAB_REACH + BARB_LEN, 0.0, z_center) * barb
+    catch_thk = HOOK_ARM_THK + HOOK_CATCH_DROP
+    catch = bd.Box(
+        HOOK_CATCH_LEN, catch_thk, HOOK_WIDTH,
+        align=(bd.Align.MAX, bd.Align.MAX, bd.Align.CENTER),
+    )
+    catch = bd.Pos(x_outer - HOOK_REACH + HOOK_CATCH_LEN, HOOK_ARM_THK / 2.0, z_center) * catch
 
-    return blade + barb
+    return arm + catch
 
 
-def latch_tabs() -> bd.Shape:
-    """Front leaf: cantilever snap tabs at the latch edge."""
+def latch_hooks() -> bd.Shape:
+    """Front leaf: cantilever hooks at the latch edge."""
     add = None
     for z in LATCH_Z:
-        piece = _tab(z)
+        piece = _hook(z)
         add = piece if add is None else add + piece
     return add
 
 
 def latch_windows() -> bd.Shape:
-    """Back leaf: cut receiving windows at the latch edge for the front tabs.
-
-    Clears the FULL radial wall thickness (plus margin) at each latch
-    position, so no leftover back material can collide with the front
-    tab's embed depth regardless of exact tab geometry.
+    """Back leaf: cut receiving windows at the latch edge for the front
+    hooks. Clears the FULL radial wall thickness (plus margin) at each
+    latch position, so no leftover back material can collide with the
+    front hook's embed depth regardless of exact hook geometry.
     """
     x_min = -(R_OUT + 2.0)
     x_max = -(R_IN - 2.0)
@@ -223,11 +281,11 @@ def latch_windows() -> bd.Shape:
     for z in LATCH_Z:
         window = bd.Box(
             width_x,
-            2.0 * WINDOW_Y_HALF,
-            TAB_WIDTH + 2.0 * WINDOW_Z_MARGIN,
-            align=(bd.Align.MIN, bd.Align.CENTER, bd.Align.CENTER),
+            WINDOW_Y_HIGH - WINDOW_Y_LOW,
+            HOOK_WIDTH + 2.0 * WINDOW_Z_MARGIN,
+            align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
         )
-        window = bd.Pos(x_min, 0.0, z) * window
+        window = bd.Pos(x_min, WINDOW_Y_LOW, z) * window
         cut = window if cut is None else cut + window
     return cut
 

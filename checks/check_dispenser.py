@@ -21,18 +21,26 @@ from lib.canister import (  # noqa: E402
     BACK_KNUCKLE_SEGMENTS,
     END_MARGIN,
     FRONT_KNUCKLE_SEGMENTS,
+    HINGE_AXIS_X,
+    HINGE_OVERLAP,
+    HINGE_Z_MAX,
+    HINGE_Z_MIN,
     KNUCKLE_R,
+    LATCH_Z,
     LENGTH,
     MOUNT_HOLE_D,
     MOUNT_Z,
+    PIN_BORE_Z0,
+    PIN_BORE_Z1,
     R_IN,
     R_OUT,
     ROLL_DIAMETER,
     ROLL_LENGTH,
     SLOT_LEN,
     SLOT_WIDTH,
+    WINDOW_Y_HIGH,
+    WINDOW_Y_LOW,
 )
-from hinge_pin import _KNUCKLE_Z_MAX, _KNUCKLE_Z_MIN  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 FAILURES: list[str] = []
@@ -117,14 +125,17 @@ def main() -> None:
         f"{LENGTH} cylindrical + 2x{R_OUT} dome radius)",
     )
 
-    # OD: max radial extent of back (X from -R_OUT..R_OUT-ish via knuckle bump ok)
+    # OD: max radial extent of back (tangent knuckle boss on the hinge edge;
+    # the plain R_OUT boundary on the latch edge, since the hook itself is
+    # on the front -- back's window is a cut, it adds no outward material).
     x_span_back = bb_back.max.X - bb_back.min.X
     y_extent_back = -bb_back.min.Y  # apex distance from split plane
+    expected_x_span = (HINGE_AXIS_X + KNUCKLE_R) + R_OUT
     check(
-        "back X span (hinge knuckle boss to plain latch edge)",
-        abs(x_span_back - (R_OUT + KNUCKLE_R + R_OUT)) < 0.5,
-        f"{x_span_back:.3f} mm (expected ~{R_OUT + KNUCKLE_R + R_OUT} mm: "
-        f"hinge OD+knuckle to plain latch OD)",
+        "back X span (tangent hinge knuckle to plain latch edge)",
+        abs(x_span_back - expected_x_span) < 1.0,
+        f"{x_span_back:.3f} mm (expected ~{expected_x_span} mm: "
+        f"hinge knuckle outer reach + plain latch OD)",
     )
     check(
         "back apex radius (wall-facing extent)",
@@ -182,6 +193,30 @@ def main() -> None:
     check("slot length (design constant)", abs(SLOT_LEN - 40.0) < 1e-9, f"{SLOT_LEN} mm")
     check("slot width (design constant)", abs(SLOT_WIDTH - 12.0) < 1e-9, f"{SLOT_WIDTH} mm")
 
+    # Tangent hinge axis: consistent with R_OUT + KNUCKLE_R - HINGE_OVERLAP (a
+    # deliberate small overlap, not exact mathematical tangency -- see
+    # lib/canister.py for why exact tangency can't be filleted).
+    check(
+        "hinge axis matches the tangent-with-overlap formula",
+        abs(HINGE_AXIS_X - (R_OUT + KNUCKLE_R - HINGE_OVERLAP)) < 1e-9,
+        f"HINGE_AXIS_X={HINGE_AXIS_X}, R_OUT+KNUCKLE_R-HINGE_OVERLAP={R_OUT + KNUCKLE_R - HINGE_OVERLAP}",
+    )
+
+    # Latch: at each LATCH_Z, back's window is a through-opening and front's
+    # hook has real material sitting in it (the engaged/closed resting state).
+    for z in LATCH_Z:
+        window_pt = (-(R_OUT + 3.0), (WINDOW_Y_LOW + WINDOW_Y_HIGH) / 2.0, z)
+        check(
+            f"latch window through-opening on back at z={z}",
+            not back_solid.is_inside(window_pt),
+            f"point {window_pt} inside back = {back_solid.is_inside(window_pt)} (expect False)",
+        )
+        check(
+            f"latch hook material present on front at z={z}",
+            front_solid.is_inside(window_pt),
+            f"point {window_pt} inside front = {front_solid.is_inside(window_pt)} (expect True)",
+        )
+
     # Interference: back vs front should not overlap (they meet only at knuckle/latch contact, zero volume)
     overlap = overlap_volume(back_solid, front_solid)
     check(
@@ -206,7 +241,7 @@ def main() -> None:
     )
 
     # Pin length vs hinge knuckle span, and clear of the domed ends
-    knuckle_span = _KNUCKLE_Z_MAX - _KNUCKLE_Z_MIN
+    knuckle_span = HINGE_Z_MAX - HINGE_Z_MIN
     pin_bb = pin_solid.bounding_box()
     pin_len = pin_bb.max.Z - pin_bb.min.Z
     check(
@@ -216,10 +251,24 @@ def main() -> None:
     )
     check(
         "pin stays within END_MARGIN of the dome-capped ends",
-        _KNUCKLE_Z_MIN >= END_MARGIN and _KNUCKLE_Z_MAX <= LENGTH - END_MARGIN,
-        f"knuckle span=[{_KNUCKLE_Z_MIN}, {_KNUCKLE_Z_MAX}], "
+        HINGE_Z_MIN >= END_MARGIN and HINGE_Z_MAX <= LENGTH - END_MARGIN,
+        f"knuckle span=[{HINGE_Z_MIN}, {HINGE_Z_MAX}], "
         f"safe range=[{END_MARGIN}, {LENGTH - END_MARGIN}]",
     )
+
+    # The whole point of the tangent hinge placement: the pin bore must be a
+    # genuine through-channel, open to free air just past each end of the
+    # knuckle row, not fully enclosed within either leaf's own wall material
+    # (which is what the old centered/embedded hinge did once the dome caps
+    # sealed the tube's ends -- there was nowhere to slide the pin in from).
+    for z_end, z_dir, label in [(PIN_BORE_Z0, -1.0, "bottom"), (PIN_BORE_Z1, 1.0, "top")]:
+        open_pt = (HINGE_AXIS_X, 0.0, z_end + z_dir * 1.0)
+        check(
+            f"pin bore open to free air past the {label} end of the knuckle row",
+            not back_solid.is_inside(open_pt) and not front_solid.is_inside(open_pt),
+            f"point {open_pt} inside back={back_solid.is_inside(open_pt)} "
+            f"front={front_solid.is_inside(open_pt)} (expect both False)",
+        )
 
     # Dome caps: each half's quarter-dome should be a hollow WALL-thick shell,
     # matching the main cylinder -- solid between R_IN and R_OUT, empty
@@ -249,15 +298,15 @@ def main() -> None:
             )
 
     # Hinge gaps: at the midpoint between consecutive knuckle segments (owned
-    # by neither leaf), BOTH leaves must be clear right out to KNUCKLE_R --
-    # the exact "leftover plain wall" bug the placemaker-channel rebuild
-    # fixes. A point at KNUCKLE_R-1 on the hinge axis there must be empty
-    # on both back and front.
+    # by neither leaf), neither leaf should have a knuckle boss there -- a
+    # probe right at the tangent knuckle axis (beyond R_OUT, so the plain
+    # wall can never reach it regardless) must be empty on both back and
+    # front.
     ordered = sorted(BACK_KNUCKLE_SEGMENTS + FRONT_KNUCKLE_SEGMENTS)
     gap_mids = [(ordered[i][1] + ordered[i + 1][0]) / 2.0 for i in range(len(ordered) - 1)]
     for z in gap_mids:
-        probe_back = (R_OUT, -(KNUCKLE_R - 1.0), z)
-        probe_front = (R_OUT, KNUCKLE_R - 1.0, z)
+        probe_back = (HINGE_AXIS_X, -0.1, z)
+        probe_front = (HINGE_AXIS_X, 0.1, z)
         check(
             f"hinge gap at z={z:.3f} clear on back",
             not back_solid.is_inside(probe_back),
