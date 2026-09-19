@@ -44,14 +44,15 @@ plain `cadgen step snapshot`.
   Each knuckle is a FULL ROUND boss (a real hinge barrel, not sliced in
   half at the parting plane): built from that leaf's own half-annulus
   (matching wall thickness and half-plane elsewhere) unioned with an
-  unclipped knuckle circle, filleted smooth on this leaf's own side. The
-  knuckle's far side pokes past the parting plane into the other leaf's
-  territory by design (same reason a real barrel hinge's knuckle spans
-  the full joint); `hinge_clearance()` cuts that small overlap from the
-  other leaf rather than clipping the knuckle. Knuckles alternate between
-  the two leaves (back gets segments 1,3,5..., front gets 2,4...) with a
-  single continuous pin bore run through the whole span, open to free air
-  past both ends of the knuckle row.
+  unclipped knuckle circle. Only the near side (where the knuckle meets
+  this leaf's own wall) is filleted smooth -- that's a genuine junction.
+  The far side (facing the other leaf) is trimmed so it never dips inside
+  R_OUT in the first place, so it can never overlap the other leaf's
+  territory there; no compensating clearance cut on the other leaf is
+  needed, and back/front interference checks out at exactly zero volume.
+  Knuckles alternate between the two leaves (back gets segments 1,3,5...,
+  front gets 2,4...) with a single continuous pin bore run through the
+  whole span, open to free air past both ends of the knuckle row.
 - Latch: a cantilever hook on the front (2.5mm arm, 3.5mm asymmetric
   drop-hook catch) catches through a window cut in the back's wall. A
   single flex point (the hook's own arm) is the most durable arrangement

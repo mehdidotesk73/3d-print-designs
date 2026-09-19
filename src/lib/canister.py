@@ -152,7 +152,6 @@ PIN_BORE_Z1 = HINGE_Z_MAX + PIN_MARGIN + 0.5
 HINGE_OVERLAP = 1.0
 HINGE_AXIS_X = R_OUT + KNUCKLE_R - HINGE_OVERLAP
 HINGE_FILLET_R = 1.5
-KNUCKLE_CLEARANCE_R = KNUCKLE_R + 0.3  # cut into the OTHER leaf, see hinge_clearance()
 
 _HINGE_IX = (R_OUT**2 - KNUCKLE_R**2 + HINGE_AXIS_X**2) / (2.0 * HINGE_AXIS_X)
 _HINGE_IY = (R_OUT**2 - _HINGE_IX**2) ** 0.5
@@ -167,13 +166,14 @@ def _knuckle_profile(front: bool) -> bd.Shape:
     itself stays a complete circle, like a real hinge barrel, not sliced
     in half at the parting plane.
 
-    The overlap between the knuckle circle and R_OUT is filleted on THIS
-    leaf's own side (where the clipped annulus actually meets the
-    knuckle) so the transition is smooth, not a sharp reentrant corner.
-    The knuckle's other side pokes past Y=0 into the other leaf's
-    territory unfilleted (there's no annulus material of this leaf's own
-    there for it to blend into) -- hinge_clearance() removes the resulting
-    small overlap from the other leaf rather than slicing the knuckle.
+    Filleting only makes sense on THIS leaf's own side, where the knuckle
+    meets real wall material of its own leaf -- that transition is a
+    genuine junction and needs the smooth blend. The far side (past Y=0,
+    facing the OTHER leaf) has no wall of this leaf's own to blend into,
+    so it stays a plain, unfilleted arc; more importantly, that far arc is
+    trimmed to never dip inside R_OUT at all, so the knuckle can never
+    overlap the other leaf's territory there in the first place -- no
+    clearance cut needed on the other leaf.
     """
     pad = R_OUT + 10.0
     align_y = bd.Align.MIN if front else bd.Align.MAX
@@ -182,6 +182,13 @@ def _knuckle_profile(front: bool) -> bd.Shape:
 
     knuckle = bd.Pos(HINGE_AXIS_X, 0.0) * bd.Circle(KNUCKLE_R)
     combined = own_annulus + knuckle
+
+    # Trim the knuckle's far side so it never dips inside R_OUT into the
+    # other leaf's half -- only the outside-facing (own-side) transition
+    # needs to reach inward to fuse; the far side just meets R_OUT flush.
+    far_rect = bd.Rectangle(2.0 * pad, pad, align=(bd.Align.CENTER, bd.Align.MAX if front else bd.Align.MIN))
+    far_trim = bd.Circle(R_OUT) & far_rect
+    combined = combined - far_trim
 
     own_iy = _HINGE_IY if front else -_HINGE_IY
 
@@ -208,20 +215,6 @@ def hinge_knuckles(front: bool, segments: list[tuple[float, float]]) -> bd.Shape
 
     bore = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, HINGE_AXIS_X, 0.0, PIN_BORE_Z0)
     return add - bore
-
-
-def hinge_clearance(other_segments: list[tuple[float, float]]) -> bd.Shape:
-    """Cut into THIS leaf at the OTHER leaf's knuckle Z-segments, clearing
-    room for that leaf's full-round knuckle boss (whose fillet dips
-    slightly past R_OUT on both sides of the hinge plane, not just its own
-    leaf's side -- see _knuckle_profile). A plain oversized cylinder, not
-    the fancy filleted profile: it only needs to clear, not look good.
-    """
-    cut = None
-    for z0, z1 in other_segments:
-        piece = _z_cylinder(KNUCKLE_CLEARANCE_R, z1 - z0, HINGE_AXIS_X, 0.0, z0)
-        cut = piece if cut is None else cut + piece
-    return cut
 
 
 def mount_features() -> tuple[bd.Shape, bd.Shape]:
