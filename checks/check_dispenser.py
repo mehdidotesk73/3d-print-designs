@@ -8,7 +8,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from cadgen import read_step
+from cadgen import read_scene, read_step
 from cadgen.geometry import (
     closest_points,
     overlap_volume,
@@ -18,15 +18,19 @@ from cadgen.geometry import (
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from lib.canister import (  # noqa: E402
+    END_MARGIN,
     KNUCKLE_R,
     LENGTH,
     MOUNT_HOLE_D,
     MOUNT_Z,
     R_IN,
     R_OUT,
+    ROLL_DIAMETER,
+    ROLL_LENGTH,
     SLOT_LEN,
     SLOT_WIDTH,
 )
+from hinge_pin import _KNUCKLE_Z_MAX, _KNUCKLE_Z_MIN  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 FAILURES: list[str] = []
@@ -40,19 +44,39 @@ def check(label: str, ok: bool, detail: str) -> None:
 
 
 def main() -> None:
+    # Topology/dimension checks use the standalone parts (clean local frame).
     back = read_step(ROOT / "STEP" / "canister_back.step")
     front = read_step(ROOT / "STEP" / "canister_front.step")
-    pin = read_step(ROOT / "STEP" / "hinge_pin.step")
+
+    # Interference checks need the ACTUAL assembled placement, so pull all
+    # three parts from the assembly's saved scene rather than re-deriving
+    # (and risking mismatching) each part's placement transform here.
+    scene = read_scene(ROOT / "STEP" / "dispenser_assembly.step")
+    placed_back = scene.resolve("#canister_back").shape()
+    placed_front = scene.resolve("#canister_front").shape()
+    placed_pin = scene.resolve("#hinge_pin").shape()
 
     back_solids = back.solids()
     front_solids = front.solids()
-    pin_solids = pin.solids()
+    placed_back_solids = placed_back.solids()
+    placed_front_solids = placed_front.solids()
+    pin_solids = placed_pin.solids()
     check("back solid count", len(back_solids) == 1, f"{len(back_solids)} solid(s)")
     check("front solid count", len(front_solids) == 1, f"{len(front_solids)} solid(s)")
 
-    back_solid = back_solids[0]
-    front_solid = front_solids[0]
+    # Sanity: the assembly places back/front with identity transforms (they're
+    # already authored in world coordinates), so the standalone and
+    # scene-resolved solids should occupy the same volume.
+    back_solid = placed_back_solids[0]
+    front_solid = placed_front_solids[0]
     pin_solid = pin_solids[0]
+    check(
+        "assembly places back/front as identity (no unexpected transform)",
+        abs(back_solid.volume - back_solids[0].volume) < 1e-6
+        and abs(front_solid.volume - front_solids[0].volume) < 1e-6,
+        f"standalone volumes back={back_solids[0].volume:.4f} front={front_solids[0].volume:.4f}, "
+        f"placed volumes back={back_solid.volume:.4f} front={front_solid.volume:.4f}",
+    )
 
     # Topology and volume sanity
     for name, solid in [("back", back_solid), ("front", front_solid), ("pin", pin_solid)]:
@@ -65,15 +89,30 @@ def main() -> None:
     crossings_front = self_intersections(front_solid)
     check("front self-intersections", len(crossings_front) == 0, f"{len(crossings_front)} crossing(s)")
 
-    # Overall envelope: OD should be ~2*R_OUT across X and Y, length across Z
+    # Roll fit: cavity ID and cylindrical length should clear the roll by CLEARANCE
+    check(
+        "cavity ID fits roll diameter",
+        (2.0 * R_IN) > ROLL_DIAMETER,
+        f"cavity ID={2.0 * R_IN:.1f} mm vs roll diameter={ROLL_DIAMETER} mm",
+    )
+    check(
+        "cylindrical length fits roll length",
+        LENGTH > ROLL_LENGTH,
+        f"cylindrical length={LENGTH:.1f} mm vs roll length={ROLL_LENGTH} mm",
+    )
+
+    # Overall envelope: OD should be ~2*R_OUT across X and Y; Z span includes
+    # the hemispherical dome caps (R_OUT beyond each end of the LENGTH span).
     bb_back = back_solid.bounding_box()
     bb_front = front_solid.bounding_box()
     combined_min_z = min(bb_back.min.Z, bb_front.min.Z)
     combined_max_z = max(bb_back.max.Z, bb_front.max.Z)
+    expected_span = LENGTH + 2.0 * R_OUT
     check(
-        "assembled axial length",
-        abs((combined_max_z - combined_min_z) - LENGTH) < 0.01,
-        f"{combined_max_z - combined_min_z:.3f} mm (expected {LENGTH} mm)",
+        "assembled axial span (cylinder + dome caps)",
+        abs((combined_max_z - combined_min_z) - expected_span) < 0.01,
+        f"{combined_max_z - combined_min_z:.3f} mm (expected {expected_span} mm = "
+        f"{LENGTH} cylindrical + 2x{R_OUT} dome radius)",
     )
 
     # OD: max radial extent of back (X from -R_OUT..R_OUT-ish via knuckle bump ok)
@@ -112,10 +151,16 @@ def main() -> None:
             back_solid.is_inside(boss_pt),
             f"point {boss_pt} inside solid = {back_solid.is_inside(boss_pt)} (expect True, boss material)",
         )
+    expected_mount_spacing = 0.5 * (LENGTH - 2.0 * END_MARGIN)
     check(
         "mount hole spacing",
-        abs((MOUNT_Z[1] - MOUNT_Z[0]) - 30.0) < 1e-9,
+        abs((MOUNT_Z[1] - MOUNT_Z[0]) - expected_mount_spacing) < 1e-9,
         f"{MOUNT_Z[1] - MOUNT_Z[0]:.3f} mm apart, at Z={MOUNT_Z}",
+    )
+    check(
+        "mount holes clear of dome-capped ends",
+        all(END_MARGIN <= z <= LENGTH - END_MARGIN for z in MOUNT_Z),
+        f"Z={MOUNT_Z}, margin=[{END_MARGIN}, {LENGTH - END_MARGIN}]",
     )
 
     # Dispensing slot: apex point at slot center should be a through-opening;
@@ -158,14 +203,42 @@ def main() -> None:
         f"overlap volume = {pin_overlap_front:.6f} mm^3",
     )
 
-    # Pin length vs hinge knuckle span
+    # Pin length vs hinge knuckle span, and clear of the domed ends
+    knuckle_span = _KNUCKLE_Z_MAX - _KNUCKLE_Z_MIN
     pin_bb = pin_solid.bounding_box()
     pin_len = pin_bb.max.Z - pin_bb.min.Z
     check(
-        "pin length covers hinge span",
-        pin_len >= LENGTH,
-        f"pin length={pin_len:.3f} mm, hinge span={LENGTH} mm",
+        "pin length covers knuckle span",
+        pin_len >= knuckle_span,
+        f"pin length={pin_len:.3f} mm, knuckle span={knuckle_span:.3f} mm",
     )
+    check(
+        "pin stays within END_MARGIN of the dome-capped ends",
+        _KNUCKLE_Z_MIN >= END_MARGIN and _KNUCKLE_Z_MAX <= LENGTH - END_MARGIN,
+        f"knuckle span=[{_KNUCKLE_Z_MIN}, {_KNUCKLE_Z_MAX}], "
+        f"safe range=[{END_MARGIN}, {LENGTH - END_MARGIN}]",
+    )
+
+    # Dome caps: each half's quarter-dome should seal its end (a point deep in
+    # the dome, past the original cylindrical end, must be solid) without
+    # reaching past the sphere's radius (a point further out must be empty).
+    for solid, is_front, name in [(back_solid, False, "back"), (front_solid, True, "front")]:
+        y_sign = 1.0 if is_front else -1.0
+        for at_bottom, z_end in [(True, 0.0), (False, LENGTH)]:
+            z_dir = -1.0 if at_bottom else 1.0
+            inside_pt = (0.0, y_sign * 10.0, z_end + z_dir * (R_OUT - 5.0))
+            outside_pt = (0.0, y_sign * 10.0, z_end + z_dir * (R_OUT + 5.0))
+            label = f"{name} dome at z_end={z_end}"
+            check(
+                f"{label}: sealed (point inside the dome is solid)",
+                solid.is_inside(inside_pt),
+                f"point {inside_pt} inside solid = {solid.is_inside(inside_pt)} (expect True)",
+            )
+            check(
+                f"{label}: bounded (point past the dome radius is empty)",
+                not solid.is_inside(outside_pt),
+                f"point {outside_pt} inside solid = {solid.is_inside(outside_pt)} (expect False)",
+            )
 
     # Closest approach between back and front at the hinge (should be ~0, they touch)
     hinge_contact = closest_points(back_solid, front_solid)

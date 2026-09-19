@@ -4,6 +4,7 @@ from cadgen import step
 from lib.canister import (
     BACK_KNUCKLE_SEGMENTS,
     FRONT_KNUCKLE_SEGMENTS,
+    dome_cap,
     half_shell,
     hinge_features,
     latch_windows,
@@ -22,6 +23,8 @@ def canister_back():
     body = body + mount_add - mount_cut
 
     body = body - latch_windows()
+
+    body = body + dome_cap(front=False, at_bottom=True) + dome_cap(front=False, at_bottom=False)
 
     body.label = "canister_back"
     return body
