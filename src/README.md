@@ -48,24 +48,33 @@ plain `cadgen step snapshot`.
      `HINGE_AXIS_X = R_OUT + PIN_R`. Segments alternate between the two
      leaves (back gets 1,3,5..., front gets 2,4...); each knuckle is a
      plain FULL ROUND boss (not clipped to either leaf's half, like a real
-     hinge barrel), unioned onto its leaf. Because the axis sits so close
-     to the edge, every knuckle boss dips inward past R_OUT into the wall
-     band on **both** sides of the parting line, not just the side it's
-     unioned onto -- so `hinge_clearance()` notches the *other* leaf out
-     wherever this leaf has a knuckle (and vice versa), or the two leaves
-     would collide there.
-  3. **Reinforcement**: after a leaf's knuckles are unioned on and the
-     other leaf's clearance is cut, `reinforce_hinge()` fillets the seam
-     edge where the knuckle's own cylindrical face meets that leaf's own
-     outer wall face -- found by the two circles' (KNUCKLE_R at the axis,
-     R_OUT at the tube's own center) intersection, selecting the near-side
-     crossing per segment directly on the unioned solid's edges. Only the
-     near side is filleted; the far side has no wall of this leaf's own to
-     blend into (that's the other leaf's clearance pocket instead).
+     hinge barrel), unioned onto its leaf.
+  3. **Reinforcement**: `reinforce_hinge()` fillets the seam edge where the
+     knuckle's own cylindrical face meets that leaf's own outer wall face
+     -- found by the two circles' (KNUCKLE_R at the axis, R_OUT at the
+     tube's own center) intersection, selecting the near-side crossing per
+     segment directly on the unioned solid's edges. Only the near side is
+     filleted; the far side has no wall of this leaf's own to blend into.
+  4. **Envelope cut**: because the axis sits so close to the edge, every
+     knuckle boss dips inward past R_OUT into the wall band on **both**
+     sides of the parting line, not just the side it's unioned onto.
+     `hinge_envelope_cut()` subtracts the hinge's full continuous
+     footprint (one cylinder spanning the whole hinge span, no per-segment
+     gaps) from the leaf, minus its own already-built segments, clearing
+     the other leaf's territory *and* the small gaps between segments
+     alike -- cutting only the other leaf's specific segments (an earlier
+     version of this) left those gaps as plain, un-notched wall sticking
+     out right next to the cleanly filleted knuckles. This runs *after*
+     the knuckles are unioned and filleted (not before), because filleting
+     needs intact wall material to blend into at each segment's own Z
+     ends; cutting the full envelope first and re-adding the exact same
+     shape at those ends is equivalent in the final geometry, but leaves
+     OCCT nothing to fillet against right at the boundary.
 
-  Checks confirm zero back/front interference and that both the notch and
-  fillet land exactly where computed. A single continuous pin bore spans
-  the whole hinge, open to free air past both ends of the knuckle row.
+  Checks confirm zero back/front interference and that the gaps, the other
+  leaf's territory, and the fillet all land exactly where computed. A
+  single continuous pin bore spans the whole hinge, open to free air past
+  both ends of the knuckle row.
 - Latch: a cantilever hook on the front (2.5mm arm, 3.5mm asymmetric
   drop-hook catch) catches through a window cut in the back's wall. A
   single flex point (the hook's own arm) is the most durable arrangement

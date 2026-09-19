@@ -159,11 +159,6 @@ _HINGE_D = ((HINGE_AXIS_X - 0.0) ** 2 + (HINGE_AXIS_Y - 0.0) ** 2) ** 0.5
 _HINGE_IX = (R_OUT**2 - KNUCKLE_R**2 + _HINGE_D**2) / (2.0 * _HINGE_D)
 _HINGE_IY = (R_OUT**2 - _HINGE_IX**2) ** 0.5
 
-# Cut into the OTHER leaf wherever THIS leaf's knuckle bosses protrude past
-# R_OUT and back inward -- see hinge_clearance().
-KNUCKLE_CLEARANCE_R = KNUCKLE_R + 0.3
-
-
 def _knuckle_segment(z0: float, z1: float) -> bd.Shape:
     """One knuckle: a plain full-round boss (a slice of the hinge's bulk
     cylinder) pierced by the continuous pin bore. Not clipped to either
@@ -192,20 +187,35 @@ def hinge_knuckles(segments: list[tuple[float, float]]) -> bd.Shape:
     return add
 
 
-def hinge_clearance(other_segments: list[tuple[float, float]]) -> bd.Shape:
-    """Cut into THIS leaf at the OTHER leaf's knuckle Z-segments. Because
-    the knuckle axis sits close to the parting edge (offset by only the pin
-    bore radius), every knuckle boss dips back inward past R_OUT into the
-    wall band on BOTH sides of the parting line, not just the leaf it's
-    unioned onto -- without this cut, the other leaf's plain (un-notched)
-    wall would collide with it there. A plain oversized cylinder, not the
-    knuckle's own precise shape: it only needs to clear, not look good.
+def hinge_envelope_cut(own_segments: list[tuple[float, float]]) -> bd.Shape:
+    """The hinge's full continuous footprint (a single cylinder at the
+    hinge axis, matching the knuckle boss's own radius exactly, spanning
+    the whole pin bore span with no segment gaps and no per-leg split)
+    MINUS this leaf's own segments.
+
+    Subtracting the whole continuous envelope -- not just the other leaf's
+    specific segments, the previous approach -- is what actually clears
+    the small gaps between segments: cutting only the other leaf's
+    footprint left those gaps as plain, un-notched wall sticking out right
+    next to the knuckle row, a visible leftover once the knuckles
+    themselves were cleanly filleted.
+
+    This leaf's own segments are excluded from the cut (not cut-then-
+    exactly-refilled by hinge_knuckles(), which is equivalent in the final
+    shape but leaves OCCT nothing to fillet against at each segment's Z
+    ends -- the wall face reinforce_hinge() blends into would already be
+    cut away right at that boundary). So the actual sequence is: add this
+    leaf's own knuckles onto the still-intact wall, fillet them, THEN
+    subtract this (whole envelope minus this leaf's own segments) to clear
+    everywhere else -- same final geometry, but the fillet runs against
+    intact material.
     """
-    cut = None
-    for z0, z1 in other_segments:
-        piece = _z_cylinder(KNUCKLE_CLEARANCE_R, z1 - z0, HINGE_AXIS_X, HINGE_AXIS_Y, z0)
-        cut = piece if cut is None else cut + piece
-    return cut
+    full = _z_cylinder(KNUCKLE_R, PIN_BORE_Z1 - PIN_BORE_Z0, HINGE_AXIS_X, HINGE_AXIS_Y, PIN_BORE_Z0)
+    protect = None
+    for z0, z1 in own_segments:
+        piece = _z_cylinder(KNUCKLE_R, z1 - z0, HINGE_AXIS_X, HINGE_AXIS_Y, z0)
+        protect = piece if protect is None else protect + piece
+    return full - protect
 
 
 def reinforce_hinge(body: bd.Shape, front: bool, segments: list[tuple[float, float]]) -> bd.Shape:

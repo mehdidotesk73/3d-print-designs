@@ -317,6 +317,26 @@ def main() -> None:
             f"point {probe_front} inside front = {front_solid.is_inside(probe_front)} (expect False)",
         )
 
+    # The whole-envelope cut (hinge_envelope_cut()) must clear the gaps
+    # just as thoroughly as it clears the other leaf's own segments --
+    # a probe in the wall band itself (not just past R_OUT) at each gap's
+    # midpoint must be empty on BOTH leaves, or plain un-notched wall would
+    # be left sticking out right next to the knuckle row (the reported bug:
+    # a segment-by-segment cut left the small gaps between knuckles
+    # untouched).
+    for z in gap_mids:
+        dip_pt = (HINGE_AXIS_X - (KNUCKLE_R - 1.0), 0.0, z)
+        check(
+            f"hinge gap at z={z:.3f}: back notched clear in the inward dip (no leftover wall)",
+            not back_solid.is_inside(dip_pt),
+            f"point {dip_pt} inside back = {back_solid.is_inside(dip_pt)} (expect False)",
+        )
+        check(
+            f"hinge gap at z={z:.3f}: front notched clear in the inward dip (no leftover wall)",
+            not front_solid.is_inside(dip_pt),
+            f"point {dip_pt} inside front = {front_solid.is_inside(dip_pt)} (expect False)",
+        )
+
     # Knuckles are full round, not sliced in half at the canister plane: at
     # each leaf's own knuckle segment, the far side of the knuckle bump
     # (past Y=0, poking into the OTHER leaf's Y-territory, near the
