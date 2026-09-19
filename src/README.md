@@ -37,21 +37,27 @@ plain `cadgen step snapshot`.
 - Hinge: the pivot axis is external and tangent to the tube's OD (not
   centered on the parting edge) -- `HINGE_AXIS_X = R_OUT + KNUCKLE_R -
   HINGE_OVERLAP`, a small deliberate overlap rather than exact tangency,
-  which OCCT can't fillet. Each knuckle is that leaf's own filleted
-  profile (tube annulus unioned with the knuckle circle, blended smooth),
-  restricted to that leaf's own half so it can never reach the other
-  leaf's territory. A centered/embedded pivot would leave the pin bore
-  fully enclosed once the dome caps exist, with nowhere to slide the pin
-  in from, and would make each leaf's body sweep back through the pin's
-  own space while swinging; the external placement fixes both. Knuckles
-  alternate between the two leaves (back gets segments 1,3,5..., front
-  gets 2,4...) with a single continuous pin bore run through the whole
-  span, open to free air past both ends of the knuckle row.
-- Latch: a cantilever hook on the front (2.5mm arm, asymmetric drop-hook
-  tip) catches through a window cut in the back's wall. A single flex
-  point (the hook's own arm) is the most durable arrangement for a catch
-  that self-engages during the closing swing -- a fully rigid hook can't
-  self-release from pure rotation about a fixed pivot (trace the latch
-  edge's arc: the same path is retraced open and shut, so a catch that
-  blocks it one way blocks it the other unless something flexes).
+  which OCCT can't fillet. A centered/embedded pivot would leave the pin
+  bore fully enclosed once the dome caps exist, with nowhere to slide the
+  pin in from, and would make each leaf's body sweep back through the
+  pin's own space while swinging; the external placement fixes both.
+  Each knuckle is a FULL ROUND boss (a real hinge barrel, not sliced in
+  half at the parting plane): built from that leaf's own half-annulus
+  (matching wall thickness and half-plane elsewhere) unioned with an
+  unclipped knuckle circle, filleted smooth on this leaf's own side. The
+  knuckle's far side pokes past the parting plane into the other leaf's
+  territory by design (same reason a real barrel hinge's knuckle spans
+  the full joint); `hinge_clearance()` cuts that small overlap from the
+  other leaf rather than clipping the knuckle. Knuckles alternate between
+  the two leaves (back gets segments 1,3,5..., front gets 2,4...) with a
+  single continuous pin bore run through the whole span, open to free air
+  past both ends of the knuckle row.
+- Latch: a cantilever hook on the front (2.5mm arm, 3.5mm asymmetric
+  drop-hook catch) catches through a window cut in the back's wall. A
+  single flex point (the hook's own arm) is the most durable arrangement
+  for a catch that self-engages during the closing swing -- a fully rigid
+  hook can't self-release from pure rotation about a fixed pivot (trace
+  the latch edge's arc: the same path is retraced open and shut, so a
+  catch that blocks it one way blocks it the other unless something
+  flexes).
 - Dispensing slit: 12mm x 40mm stadium slot on the front's outward face.

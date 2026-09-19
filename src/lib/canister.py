@@ -92,8 +92,8 @@ LATCH_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
 HOOK_WIDTH = 12.0
 HOOK_ARM_THK = 2.5  # was TAB_THK=1.8 on the old cantilever -- thicker, sturdier arm
 HOOK_REACH = 6.0  # protrusion past the OD edge
-HOOK_CATCH_LEN = 3.0  # catch's inward hook length past the arm's own tip
-HOOK_CATCH_DROP = 2.2  # catch drops this far past the arm's bottom face -- asymmetric, one-sided
+HOOK_CATCH_LEN = 4.0  # catch's inward hook length past the arm's own tip
+HOOK_CATCH_DROP = 3.5  # catch drops this far past the arm's bottom face -- asymmetric, one-sided
 HOOK_EMBED = 2.0  # extends the arm's base into the wall so it truly fuses, not just touches at an edge
 WINDOW_Z_MARGIN = 0.5  # window is 1mm wider than the hook
 WINDOW_Y_HIGH = HOOK_ARM_THK / 2.0 + 0.5  # clearance -- the arm just passes through here
@@ -152,43 +152,49 @@ PIN_BORE_Z1 = HINGE_Z_MAX + PIN_MARGIN + 0.5
 HINGE_OVERLAP = 1.0
 HINGE_AXIS_X = R_OUT + KNUCKLE_R - HINGE_OVERLAP
 HINGE_FILLET_R = 1.5
+KNUCKLE_CLEARANCE_R = KNUCKLE_R + 0.3  # cut into the OTHER leaf, see hinge_clearance()
 
 _HINGE_IX = (R_OUT**2 - KNUCKLE_R**2 + HINGE_AXIS_X**2) / (2.0 * HINGE_AXIS_X)
 _HINGE_IY = (R_OUT**2 - _HINGE_IX**2) ** 0.5
 
 
 def _knuckle_profile(front: bool) -> bd.Shape:
-    """2D cross-section for one leaf's knuckle: the tube's own annulus
-    (matching wall thickness elsewhere) unioned with a knuckle-diameter
-    circle placed tangent to (with a small robust overlap into) the tube's
-    OD, filleted where the two meet so the knuckle blends smoothly into
-    the canister's outer surface instead of meeting it at a sharp
-    reentrant corner, then restricted to this leaf's own half so it can
-    never reach into the other leaf's territory.
+    """2D cross-section for one leaf's knuckle: THIS leaf's own annulus
+    half (matching wall thickness and half-plane elsewhere -- same clip
+    half_shell() uses) unioned with a FULL ROUND knuckle-diameter circle
+    placed tangent to (with a small robust overlap into) the tube's OD.
+    Only the annulus is clipped to this leaf's half; the knuckle bump
+    itself stays a complete circle, like a real hinge barrel, not sliced
+    in half at the parting plane.
+
+    The overlap between the knuckle circle and R_OUT is filleted on THIS
+    leaf's own side (where the clipped annulus actually meets the
+    knuckle) so the transition is smooth, not a sharp reentrant corner.
+    The knuckle's other side pokes past Y=0 into the other leaf's
+    territory unfilleted (there's no annulus material of this leaf's own
+    there for it to blend into) -- hinge_clearance() removes the resulting
+    small overlap from the other leaf rather than slicing the knuckle.
     """
-    annulus = bd.Circle(R_OUT) - bd.Circle(R_IN)
+    pad = R_OUT + 10.0
+    align_y = bd.Align.MIN if front else bd.Align.MAX
+    rect = bd.Rectangle(2.0 * pad, pad, align=(bd.Align.CENTER, align_y))
+    own_annulus = (bd.Circle(R_OUT) - bd.Circle(R_IN)) & rect
+
     knuckle = bd.Pos(HINGE_AXIS_X, 0.0) * bd.Circle(KNUCKLE_R)
-    combined = annulus + knuckle
+    combined = own_annulus + knuckle
+
+    own_iy = _HINGE_IY if front else -_HINGE_IY
 
     def _near(v, x: float, y: float, tol: float = 0.05) -> bool:
         return abs(v.X - x) < tol and abs(v.Y - y) < tol
 
-    fillet_verts = [
-        v
-        for v in combined.vertices()
-        if _near(v, _HINGE_IX, _HINGE_IY) or _near(v, _HINGE_IX, -_HINGE_IY)
-    ]
-    combined = bd.fillet(fillet_verts, HINGE_FILLET_R)
-
-    pad = R_OUT + 10.0
-    align_y = bd.Align.MIN if front else bd.Align.MAX
-    rect = bd.Rectangle(2.0 * pad, pad, align=(bd.Align.CENTER, align_y))
-    return combined & rect
+    fillet_verts = [v for v in combined.vertices() if _near(v, _HINGE_IX, own_iy)]
+    return bd.fillet(fillet_verts, HINGE_FILLET_R)
 
 
 def hinge_knuckles(front: bool, segments: list[tuple[float, float]]) -> bd.Shape:
     """One leaf's knuckle bosses: its half of the alternating segment list,
-    each an extrusion of that leaf's own filleted knuckle profile, plus a
+    each a full-round extrusion of that leaf's own knuckle profile, plus a
     single continuous pin bore run through the whole hinge span (open at
     both ends past the knuckle row, so the pin can be slid straight in
     after the two leaves are brought together -- see HINGE_AXIS_X above).
@@ -202,6 +208,20 @@ def hinge_knuckles(front: bool, segments: list[tuple[float, float]]) -> bd.Shape
 
     bore = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, HINGE_AXIS_X, 0.0, PIN_BORE_Z0)
     return add - bore
+
+
+def hinge_clearance(other_segments: list[tuple[float, float]]) -> bd.Shape:
+    """Cut into THIS leaf at the OTHER leaf's knuckle Z-segments, clearing
+    room for that leaf's full-round knuckle boss (whose fillet dips
+    slightly past R_OUT on both sides of the hinge plane, not just its own
+    leaf's side -- see _knuckle_profile). A plain oversized cylinder, not
+    the fancy filleted profile: it only needs to clear, not look good.
+    """
+    cut = None
+    for z0, z1 in other_segments:
+        piece = _z_cylinder(KNUCKLE_CLEARANCE_R, z1 - z0, HINGE_AXIS_X, 0.0, z0)
+        cut = piece if cut is None else cut + piece
+    return cut
 
 
 def mount_features() -> tuple[bd.Shape, bd.Shape]:

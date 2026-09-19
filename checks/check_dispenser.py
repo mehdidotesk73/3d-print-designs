@@ -318,6 +318,27 @@ def main() -> None:
             f"point {probe_front} inside front = {front_solid.is_inside(probe_front)} (expect False)",
         )
 
+    # Knuckles are full round, not sliced in half at the canister plane: at
+    # each leaf's own knuckle segment, the far side of the knuckle bump
+    # (past Y=0, poking into the OTHER leaf's Y-territory, near the
+    # knuckle's own outer radius) must still be solid.
+    for z0, z1 in BACK_KNUCKLE_SEGMENTS:
+        z = (z0 + z1) / 2.0
+        far_pt = (HINGE_AXIS_X, KNUCKLE_R - 0.5, z)  # +Y side, into front's territory
+        check(
+            f"back knuckle at z={z:.3f} is full round (far side solid)",
+            back_solid.is_inside(far_pt),
+            f"point {far_pt} inside back = {back_solid.is_inside(far_pt)} (expect True)",
+        )
+    for z0, z1 in FRONT_KNUCKLE_SEGMENTS:
+        z = (z0 + z1) / 2.0
+        far_pt = (HINGE_AXIS_X, -(KNUCKLE_R - 0.5), z)  # -Y side, into back's territory
+        check(
+            f"front knuckle at z={z:.3f} is full round (far side solid)",
+            front_solid.is_inside(far_pt),
+            f"point {far_pt} inside front = {front_solid.is_inside(far_pt)} (expect True)",
+        )
+
     # Closest approach between back and front at the hinge (should be ~0, they touch)
     hinge_contact = closest_points(back_solid, front_solid)
     print(f"[INFO] closest approach back<->front: {hinge_contact.distance:.4f} mm")
