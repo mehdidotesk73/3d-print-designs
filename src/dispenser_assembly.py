@@ -3,17 +3,16 @@ from cadgen import step
 
 from canister_back import canister_back
 from canister_front import canister_front
+from closing_screw import closing_screw
 from hinge_pin import hinge_pin
-from latch_lever import latch_lever
-from latch_pin import latch_pin
 from lib.canister import (
     HINGE_AXIS_X,
-    LATCH_AXIS_X,
-    LATCH_AXIS_Y,
-    LATCH_PIN_BORE_Z0,
-    LATCH_PIN_BORE_Z1,
+    LATCH_HOLE_Y,
+    LATCH_HOLE_Z,
     PIN_BORE_Z0,
     PIN_BORE_Z1,
+    RIDGE_OUTER_X,
+    SCREW_TIP_ENGAGE,
 )
 
 
@@ -30,15 +29,18 @@ def dispenser_assembly():
     pin = bd.Pos(HINGE_AXIS_X, 0.0, pin_z_center) * pin
     pin.label = "hinge_pin"
 
-    lever = latch_lever()
-    lever.label = "latch_lever"
+    # Local frame: Z=0 is the tip's own end, increasing toward the head.
+    # Rotating -90 about Y maps local +Z to world -X (the direction the
+    # screw points as it's driven in, from the tongue's outer face toward
+    # the ridge); the tip's end then lands at its seated depth within the
+    # ridge's blind hole.
+    screw = closing_screw()
+    screw = screw.rotate(bd.Axis.Y, -90.0)
+    tip_end_x = RIDGE_OUTER_X + SCREW_TIP_ENGAGE
+    screw = bd.Pos(tip_end_x, LATCH_HOLE_Y, LATCH_HOLE_Z) * screw
+    screw.label = "closing_screw"
 
-    latch_pin_z_center = (LATCH_PIN_BORE_Z0 + LATCH_PIN_BORE_Z1) / 2.0
-    lpin = latch_pin()
-    lpin = bd.Pos(LATCH_AXIS_X, LATCH_AXIS_Y, latch_pin_z_center) * lpin
-    lpin.label = "latch_pin"
-
-    return bd.Compound(children=[back, front, pin, lever, lpin], label="dispenser_assembly")
+    return bd.Compound(children=[back, front, pin, screw], label="dispenser_assembly")
 
 
 if __name__ == "__main__":

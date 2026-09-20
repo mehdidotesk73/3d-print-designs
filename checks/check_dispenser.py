@@ -25,24 +25,9 @@ from lib.canister import (  # noqa: E402
     HINGE_Z_MAX,
     HINGE_Z_MIN,
     KNUCKLE_R,
-    LATCH_AXIS_X,
-    LATCH_AXIS_Y,
-    LATCH_FIXED_SEGMENTS,
-    LATCH_HOOK_X_OUTER,
-    LATCH_HOOK_Y_MAX,
-    LATCH_KNUCKLE_R,
-    LATCH_LEVER_SEGMENTS,
-    LATCH_LIP_CLEARANCE,
-    LATCH_LIP_EMBED,
-    LATCH_LIP_REACH,
-    LATCH_LIP_Y_MAX,
-    LATCH_LIP_Y_MIN,
-    LATCH_LIP_Z0,
-    LATCH_LIP_Z1,
-    LATCH_PIN_BORE_Z0,
-    LATCH_PIN_BORE_Z1,
-    LATCH_PIN_R,
-    LATCH_SHAFT_X_INNER,
+    LATCH_GAP,
+    LATCH_HOLE_Y,
+    LATCH_HOLE_Z,
     LENGTH,
     MOUNT_HOLE_D,
     MOUNT_Z,
@@ -51,10 +36,23 @@ from lib.canister import (  # noqa: E402
     PIN_R,
     R_IN,
     R_OUT,
+    RIDGE_EMBED,
+    RIDGE_HOLE_D,
+    RIDGE_HOLE_DEPTH,
+    RIDGE_INNER_X,
+    RIDGE_OUTER_X,
+    RIDGE_Y_DEPTH,
     ROLL_DIAMETER,
     ROLL_LENGTH,
+    SCREW_MINOR_D,
+    SCREW_TIP_D,
+    SCREW_TIP_ENGAGE,
     SLOT_LEN,
     SLOT_WIDTH,
+    TONGUE_HOLE_D,
+    TONGUE_INNER_X,
+    TONGUE_OUTER_X,
+    TONGUE_Y_MAX,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -80,19 +78,17 @@ def main() -> None:
     placed_back = scene.resolve("#canister_back").shape()
     placed_front = scene.resolve("#canister_front").shape()
     placed_pin = scene.resolve("#hinge_pin").shape()
-    placed_lever = scene.resolve("#latch_lever").shape()
-    placed_lpin = scene.resolve("#latch_pin").shape()
+    placed_screw = scene.resolve("#closing_screw").shape()
 
     back_solids = back.solids()
     front_solids = front.solids()
     placed_back_solids = placed_back.solids()
     placed_front_solids = placed_front.solids()
     pin_solids = placed_pin.solids()
-    lever_solids = placed_lever.solids()
-    lpin_solids = placed_lpin.solids()
+    screw_solids = placed_screw.solids()
     check("back solid count", len(back_solids) == 1, f"{len(back_solids)} solid(s)")
     check("front solid count", len(front_solids) == 1, f"{len(front_solids)} solid(s)")
-    check("lever solid count", len(lever_solids) == 1, f"{len(lever_solids)} solid(s)")
+    check("screw solid count", len(screw_solids) == 1, f"{len(screw_solids)} solid(s)")
 
     # Sanity: the assembly places back/front with identity transforms (they're
     # already authored in world coordinates), so the standalone and
@@ -100,8 +96,7 @@ def main() -> None:
     back_solid = placed_back_solids[0]
     front_solid = placed_front_solids[0]
     pin_solid = pin_solids[0]
-    lever_solid = lever_solids[0]
-    lpin_solid = lpin_solids[0]
+    screw_solid = screw_solids[0]
     check(
         "assembly places back/front as identity (no unexpected transform)",
         abs(back_solid.volume - back_solids[0].volume) < 1e-6
@@ -112,8 +107,7 @@ def main() -> None:
 
     # Topology and volume sanity
     for name, solid in [
-        ("back", back_solid), ("front", front_solid), ("pin", pin_solid),
-        ("lever", lever_solid), ("latch pin", lpin_solid),
+        ("back", back_solid), ("front", front_solid), ("pin", pin_solid), ("screw", screw_solid),
     ]:
         issues = topology_errors(solid)
         check(f"{name} topology", len(issues) == 0, f"{len(issues)} issue(s): {[i.code for i in issues]}")
@@ -151,16 +145,28 @@ def main() -> None:
     )
 
     # OD: max radial extent of back (the hinge knuckle boss's outer reach on
-    # one side, the latch pivot's own fixed knuckle boss on the other --
-    # both tangent knuckle rows now, same formula, mirrored).
+    # one side, the closing ridge's own outer face on the other).
     x_span_back = bb_back.max.X - bb_back.min.X
     y_extent_back = -bb_back.min.Y  # apex distance from split plane
-    expected_x_span = (HINGE_AXIS_X + KNUCKLE_R) + (-LATCH_AXIS_X + LATCH_KNUCKLE_R)
+    expected_x_span = (HINGE_AXIS_X + KNUCKLE_R) + (-RIDGE_OUTER_X)
     check(
-        "back X span (tangent hinge knuckle to tangent latch pivot knuckle)",
+        "back X span (tangent hinge knuckle to ridge's outer face)",
         abs(x_span_back - expected_x_span) < 1.0,
         f"{x_span_back:.3f} mm (expected ~{expected_x_span} mm: "
-        f"hinge knuckle outer reach + latch pivot knuckle outer reach)",
+        f"hinge knuckle outer reach + ridge outer reach)",
+    )
+
+    # Front's own X span, similarly -- the tongue reaches even further
+    # outboard than the ridge (it has to clear the ridge's own outer face
+    # by LATCH_GAP), so it's front's own extreme on that side now.
+    bb_front = front_solid.bounding_box()
+    x_span_front = bb_front.max.X - bb_front.min.X
+    expected_x_span_front = (HINGE_AXIS_X + KNUCKLE_R) + (-TONGUE_OUTER_X)
+    check(
+        "front X span (tangent hinge knuckle to tongue's outer face)",
+        abs(x_span_front - expected_x_span_front) < 1.0,
+        f"{x_span_front:.3f} mm (expected ~{expected_x_span_front} mm: "
+        f"hinge knuckle outer reach + tongue outer reach)",
     )
     check(
         "back apex radius (wall-facing extent)",
@@ -226,14 +232,6 @@ def main() -> None:
         f"HINGE_AXIS_X={HINGE_AXIS_X}, R_OUT+PIN_R={R_OUT + PIN_R}",
     )
 
-    # Generic latch pivot placement formula: axis = edge (-R_OUT, 0) + normal
-    # (-1, 0) * pin bore radius -- same formula as the hinge, mirrored.
-    check(
-        "latch axis matches the edge + normal*pin_radius formula",
-        abs(LATCH_AXIS_X - (-R_OUT - LATCH_PIN_R)) < 1e-9,
-        f"LATCH_AXIS_X={LATCH_AXIS_X}, -R_OUT-LATCH_PIN_R={-R_OUT - LATCH_PIN_R}",
-    )
-
     # Interference: back vs front should not overlap (they meet only at knuckle/latch contact, zero volume)
     overlap = overlap_volume(back_solid, front_solid)
     check(
@@ -257,18 +255,42 @@ def main() -> None:
         f"overlap volume = {pin_overlap_front:.6f} mm^3",
     )
 
-    # The lever and its own pin must not collide with anything -- back's
-    # fixed pivot knuckles, front's main wall, the lip, or the hinge's own
-    # pin -- in the closed, resting (assembled) state.
-    for name_a, solid_a in [("lever", lever_solid), ("latch pin", lpin_solid)]:
-        for name_b, solid_b in [("back", back_solid), ("front", front_solid), ("hinge pin", pin_solid)]:
-            ov = overlap_volume(solid_a, solid_b)
-            check(f"{name_a} vs {name_b} interference", ov < 0.01, f"overlap volume = {ov:.6f} mm^3")
-    lever_lpin_overlap = overlap_volume(lever_solid, lpin_solid)
+    # The screw's tip must not collide with the ridge's own material (it
+    # only ever occupies the blind hole's clearance) or the hinge pin.
+    screw_overlap_back = overlap_volume(screw_solid, back_solid)
+    screw_overlap_pin = overlap_volume(screw_solid, pin_solid)
     check(
-        "lever vs latch pin interference",
-        lever_lpin_overlap < 0.01,
-        f"overlap volume = {lever_lpin_overlap:.6f} mm^3",
+        "screw vs back interference",
+        screw_overlap_back < 0.01,
+        f"overlap volume = {screw_overlap_back:.6f} mm^3",
+    )
+    check(
+        "screw vs hinge pin interference",
+        screw_overlap_pin < 0.01,
+        f"overlap volume = {screw_overlap_pin:.6f} mm^3",
+    )
+
+    # Screw vs front is the ONE deliberate exception to zero interference:
+    # the tongue's pilot hole (TONGUE_HOLE_D) is undersized against the
+    # screw's own thread (self-tapping, the common approach for a small
+    # FDM-printed fastener -- the screw cuts its own channel on first
+    # insertion, rather than modeling a separate matching internal thread
+    # and hoping the two meshes clear each other at print tolerance). A
+    # real screw-boss self-tap always has *some* calculated interference by
+    # design; check it's genuinely engaged (not accidentally zero, which
+    # would mean the hole isn't actually undersized) without being
+    # absurdly large (which would mean the pilot hole is misconfigured).
+    screw_overlap_front = overlap_volume(screw_solid, front_solid)
+    check(
+        "screw vs front: genuine self-tapping engagement (not zero, not excessive)",
+        1.0 < screw_overlap_front < 50.0,
+        f"overlap volume = {screw_overlap_front:.6f} mm^3 (expected: real but modest -- "
+        f"the pilot hole is undersized on purpose)",
+    )
+    check(
+        "tongue pilot hole is undersized against the screw's minor diameter (enables self-tapping)",
+        TONGUE_HOLE_D < SCREW_MINOR_D,
+        f"TONGUE_HOLE_D={TONGUE_HOLE_D} mm < SCREW_MINOR_D={SCREW_MINOR_D} mm",
     )
 
     # Pin length vs hinge knuckle span, and clear of the domed ends
@@ -424,116 +446,75 @@ def main() -> None:
             f"point {dip_pt} inside back = {back_solid.is_inside(dip_pt)} (expect False, hinge_clearance())",
         )
 
-    # Latch pivot: back's own fixed knuckles should be solid in the inward
-    # dip (same tangent-knuckle principle as the hinge, at a smaller
-    # radius), with front notched clear there -- and vice versa at the
-    # lever's own knuckle segment, which belongs to neither back nor front.
-    for z0, z1 in LATCH_FIXED_SEGMENTS:
-        z = (z0 + z1) / 2.0
-        dip_pt = (LATCH_AXIS_X + (LATCH_KNUCKLE_R - 1.0), 0.0, z)
-        check(
-            f"latch fixed knuckle at z={z:.3f}: back solid in the inward dip",
-            back_solid.is_inside(dip_pt),
-            f"point {dip_pt} inside back = {back_solid.is_inside(dip_pt)} (expect True)",
-        )
-        check(
-            f"latch fixed knuckle at z={z:.3f}: front notched clear in the inward dip",
-            not front_solid.is_inside(dip_pt),
-            f"point {dip_pt} inside front = {front_solid.is_inside(dip_pt)} (expect False)",
-        )
-        far_pt = (LATCH_AXIS_X, -(LATCH_KNUCKLE_R - 0.5), z)  # -Y side, into back's own far reach
-        check(
-            f"latch fixed knuckle at z={z:.3f} is full round (far side solid)",
-            back_solid.is_inside(far_pt),
-            f"point {far_pt} inside back = {back_solid.is_inside(far_pt)} (expect True)",
-        )
-    for z0, z1 in LATCH_LEVER_SEGMENTS:
-        z = (z0 + z1) / 2.0
-        dip_pt = (LATCH_AXIS_X + (LATCH_KNUCKLE_R - 1.0), 0.0, z)
-        check(
-            f"latch lever knuckle at z={z:.3f}: back notched clear (belongs to the lever, not back)",
-            not back_solid.is_inside(dip_pt),
-            f"point {dip_pt} inside back = {back_solid.is_inside(dip_pt)} (expect False)",
-        )
-        check(
-            f"latch lever knuckle at z={z:.3f}: front notched clear (belongs to the lever, not front)",
-            not front_solid.is_inside(dip_pt),
-            f"point {dip_pt} inside front = {front_solid.is_inside(dip_pt)} (expect False)",
-        )
-        # Offset from the axis (not the axis itself -- that's the pin bore's
-        # own hollow center) but still within the knuckle's own radius.
-        check(
-            f"latch lever knuckle at z={z:.3f}: lever itself is solid there",
-            lever_solid.is_inside(dip_pt),
-            f"point {dip_pt} inside lever = {lever_solid.is_inside(dip_pt)} (expect True)",
-        )
-
-    # The latch pin bore must be open to free air past both ends of the
-    # pivot knuckle row, same reasoning as the hinge's own pin bore.
-    for z_end, z_dir, label in [(LATCH_PIN_BORE_Z0, -1.0, "bottom"), (LATCH_PIN_BORE_Z1, 1.0, "top")]:
-        open_pt = (LATCH_AXIS_X, 0.0, z_end + z_dir * 1.0)
-        check(
-            f"latch pin bore open to free air past the {label} end of the knuckle row",
-            not back_solid.is_inside(open_pt) and not front_solid.is_inside(open_pt),
-            f"point {open_pt} inside back={back_solid.is_inside(open_pt)} "
-            f"front={front_solid.is_inside(open_pt)} (expect both False)",
-        )
-
-    # Latch pin length vs its own knuckle span, and clear of the domed ends
-    latch_knuckle_span = LATCH_LEVER_SEGMENTS[-1][1] - LATCH_FIXED_SEGMENTS[0][0]
-    lpin_bb = lpin_solid.bounding_box()
-    lpin_len = lpin_bb.max.Z - lpin_bb.min.Z
+    # Ridge (back): solid material away from its own blind hole, and the
+    # hole itself reads empty at its mid-depth.
+    ridge_solid_pt = ((RIDGE_OUTER_X + RIDGE_INNER_X) / 2.0, -(RIDGE_Y_DEPTH - 1.0), LATCH_HOLE_Z)
     check(
-        "latch pin length covers its own knuckle span",
-        lpin_len >= latch_knuckle_span,
-        f"pin length={lpin_len:.3f} mm, knuckle span={latch_knuckle_span:.3f} mm",
+        "ridge is solid material on back (away from its own hole)",
+        back_solid.is_inside(ridge_solid_pt),
+        f"point {ridge_solid_pt} inside back = {back_solid.is_inside(ridge_solid_pt)} (expect True)",
+    )
+    ridge_hole_pt = (RIDGE_OUTER_X + RIDGE_HOLE_DEPTH / 2.0, LATCH_HOLE_Y, LATCH_HOLE_Z)
+    check(
+        "ridge's blind hole is a genuine void at mid-depth",
+        not back_solid.is_inside(ridge_hole_pt),
+        f"point {ridge_hole_pt} inside back = {back_solid.is_inside(ridge_hole_pt)} (expect False)",
     )
     check(
-        "latch pin stays within END_MARGIN of the dome-capped ends",
-        LATCH_FIXED_SEGMENTS[0][0] >= END_MARGIN and LATCH_LEVER_SEGMENTS[-1][1] <= LENGTH - END_MARGIN,
-        f"knuckle span=[{LATCH_FIXED_SEGMENTS[0][0]}, {LATCH_LEVER_SEGMENTS[-1][1]}], "
-        f"safe range=[{END_MARGIN}, {LENGTH - END_MARGIN}]",
+        "ridge embeds past R_OUT for a genuine fused union with back's own wall",
+        RIDGE_INNER_X > -R_OUT,
+        f"RIDGE_INNER_X={RIDGE_INNER_X} mm > -R_OUT={-R_OUT} mm (embed depth {RIDGE_EMBED} mm)",
     )
 
-    # Catch lip (front) and hook (lever): the lip should be genuine solid
-    # material fused to front, and the hook genuine solid material on the
-    # lever, with real radial (X) overlap between them and a small Y gap
-    # -- the physical block that keeps front from swinging open, without
-    # the two touching in the closed resting state (checked separately via
-    # the interference checks above, which must read zero).
-    lip_mid_y = (LATCH_LIP_Y_MIN + LATCH_LIP_Y_MAX) / 2.0
-    lip_mid_x = -(R_OUT + LATCH_LIP_REACH / 2.0)
-    lip_z = (LATCH_LIP_Z0 + LATCH_LIP_Z1) / 2.0
-    lip_pt = (lip_mid_x, lip_mid_y, lip_z)
+    # Tongue (front): solid material in both the thin arm (over the ridge)
+    # and the wider root (embedded into front's own wall), and its own
+    # pilot hole reads empty at its center.
+    tongue_arm_pt = ((TONGUE_OUTER_X + TONGUE_INNER_X) / 2.0, -(RIDGE_Y_DEPTH - 1.0), LATCH_HOLE_Z)
     check(
-        "latch catch lip is solid material on front",
-        front_solid.is_inside(lip_pt),
-        f"point {lip_pt} inside front = {front_solid.is_inside(lip_pt)} (expect True)",
+        "tongue's arm is solid material on front (over the ridge, away from the hole)",
+        front_solid.is_inside(tongue_arm_pt),
+        f"point {tongue_arm_pt} inside front = {front_solid.is_inside(tongue_arm_pt)} (expect True)",
+    )
+    tongue_root_pt = (RIDGE_INNER_X - 0.5, TONGUE_Y_MAX - 1.0, LATCH_HOLE_Z)
+    check(
+        "tongue's root is solid material on front (embedded past R_OUT)",
+        front_solid.is_inside(tongue_root_pt),
+        f"point {tongue_root_pt} inside front = {front_solid.is_inside(tongue_root_pt)} (expect True)",
+    )
+    tongue_hole_pt = ((TONGUE_OUTER_X + TONGUE_INNER_X) / 2.0, LATCH_HOLE_Y, LATCH_HOLE_Z)
+    check(
+        "tongue's pilot hole is a genuine void at its center",
+        not front_solid.is_inside(tongue_hole_pt),
+        f"point {tongue_hole_pt} inside front = {front_solid.is_inside(tongue_hole_pt)} (expect False)",
     )
 
-    hook_y0 = LATCH_LIP_Y_MAX + LATCH_LIP_CLEARANCE
-    hook_mid_y = (hook_y0 + LATCH_HOOK_Y_MAX) / 2.0
-    hook_mid_x = (LATCH_HOOK_X_OUTER + lip_mid_x) / 2.0
-    hook_pt = (hook_mid_x, hook_mid_y, lip_z)
+    # The screw's tip must be fully contained within the ridge's blind hole
+    # (not reaching its bottom, not falling short of it) -- the whole point
+    # of the mechanism: the ridge is a barrier the screw cannot pass.
     check(
-        "latch lever hook is solid material on the lever",
-        lever_solid.is_inside(hook_pt),
-        f"point {hook_pt} inside lever = {lever_solid.is_inside(hook_pt)} (expect True)",
+        "screw's smooth tip fits within the ridge's blind hole radius",
+        SCREW_TIP_D < RIDGE_HOLE_D,
+        f"SCREW_TIP_D={SCREW_TIP_D} mm < RIDGE_HOLE_D={RIDGE_HOLE_D} mm",
+    )
+    check(
+        "screw's tip doesn't bottom out in the ridge's hole",
+        SCREW_TIP_ENGAGE < RIDGE_HOLE_DEPTH,
+        f"SCREW_TIP_ENGAGE={SCREW_TIP_ENGAGE} mm < RIDGE_HOLE_DEPTH={RIDGE_HOLE_DEPTH} mm",
     )
 
-    lip_x0 = -(R_OUT + LATCH_LIP_REACH)
-    lip_x1 = -R_OUT + LATCH_LIP_EMBED
-    overlap_x_width = min(lip_x1, LATCH_SHAFT_X_INNER) - max(lip_x0, LATCH_HOOK_X_OUTER)
+    # The screw's head must sit outside the tongue's own outer face --
+    # accessible from outside the assembly for tightening/loosening.
+    screw_bb = screw_solid.bounding_box()
     check(
-        "latch hook has genuine radial overlap with the lip (a real mechanical block)",
-        overlap_x_width > 1.0,
-        f"overlap width = {overlap_x_width:.3f} mm (hook X=[{LATCH_HOOK_X_OUTER}, {LATCH_SHAFT_X_INNER}], "
-        f"lip X=[{lip_x0}, {lip_x1}])",
+        "screw's head is accessible beyond the tongue's outer face",
+        screw_bb.min.X < TONGUE_OUTER_X,
+        f"screw min X={screw_bb.min.X:.3f} mm < TONGUE_OUTER_X={TONGUE_OUTER_X} mm "
+        f"(head sticks out by {TONGUE_OUTER_X - screw_bb.min.X:.3f} mm)",
     )
     check(
-        "latch hook sits beyond the lip in Y with only a small clearance gap (blocks it from lifting)",
-        0.0 < (hook_y0 - LATCH_LIP_Y_MAX) < 1.0,
-        f"gap = {hook_y0 - LATCH_LIP_Y_MAX:.3f} mm",
+        "the gap between the tongue's inner face and the ridge's outer tip matches LATCH_GAP",
+        abs((RIDGE_OUTER_X - TONGUE_INNER_X) - LATCH_GAP) < 1e-9,
+        f"RIDGE_OUTER_X-TONGUE_INNER_X={RIDGE_OUTER_X - TONGUE_INNER_X} mm, LATCH_GAP={LATCH_GAP} mm",
     )
 
     # Closest approach between back and front at the hinge (should be ~0, they touch)

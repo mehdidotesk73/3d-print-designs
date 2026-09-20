@@ -82,82 +82,56 @@ MOUNT_BOSS_HEIGHT = 3.0
 _mount_usable = LENGTH - 2.0 * END_MARGIN
 MOUNT_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
 
-# Lever latch (edge at X=-R_OUT): a fully rigid pivoting lever, printed as
-# its own small part, pinned to the back via a mini version of the hinge's
-# own knuckle construction (knuckle_row/knuckle_envelope_cut/reinforce_seam,
-# reused directly). It swings to hook over a static lip on the front --
-# a positive mechanical block, replacing the old cantilever hook, which had
-# to rely on a flex point to self-release (see the git history for that
-# reasoning): a rigid lever needs no flex anywhere, since it's a second,
-# independently-actuated degree of freedom rather than a snap that has to
-# both engage AND release from the same swing motion.
-LATCH_PIN_D = 2.5
-LATCH_PIN_R = LATCH_PIN_D / 2.0 + 0.1
-LATCH_KNUCKLE_R = 3.5
-LATCH_KNUCKLE_W = 6.0
-LATCH_KNUCKLE_GAP = 1.2
-LATCH_FILLET_R = 1.2
-
-# Generic knuckle placement (edge + normal * pin radius), same formula as
-# the hinge: here the edge is the tube's OTHER parting line (X=-R_OUT), and
-# the normal points outward (-X) at that edge.
-LATCH_EDGE_X = -R_OUT
-LATCH_EDGE_Y = 0.0
-LATCH_NORMAL_X = -1.0
-LATCH_NORMAL_Y = 0.0
-LATCH_AXIS_X = LATCH_EDGE_X + LATCH_NORMAL_X * LATCH_PIN_R
-LATCH_AXIS_Y = LATCH_EDGE_Y + LATCH_NORMAL_Y * LATCH_PIN_R
-
-# Three knuckle segments (fixed, lever, fixed), centered on the tube's own
-# Z midpoint -- one lever latch is plenty for a dispenser this size.
+# Closing latch (edge at X=-R_OUT): a raised RIDGE on the back's closing
+# edge is a solid, unthreaded barrier. A threaded SCREW, twisted through a
+# matching hole in a TONGUE on the front's closing edge, presses its tip
+# down until it's blocked by the ridge -- the ridge simply can't be passed.
+# Once tightened, the screw (captive in the tongue's own thread) becomes a
+# rigid strut between front's tongue and back's ridge: pulling front open
+# would need the screw to either compress further into the ridge (blocked)
+# or unscrew itself (a rotation, not a pull) -- no flex, no separate pivot,
+# nothing to hinge or snap. Replaces both the earlier cantilever hook and
+# the pivoting lever with the simplest mechanism yet: a single screw.
 LATCH_Z_CENTER = LENGTH / 2.0
-_latch_span = 3.0 * LATCH_KNUCKLE_W + 2.0 * LATCH_KNUCKLE_GAP
-_latch_z0 = LATCH_Z_CENTER - _latch_span / 2.0
-LATCH_FIXED_SEGMENTS = [
-    (_latch_z0, _latch_z0 + LATCH_KNUCKLE_W),
-    (
-        _latch_z0 + 2.0 * (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP),
-        _latch_z0 + 2.0 * (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP) + LATCH_KNUCKLE_W,
-    ),
-]
-LATCH_LEVER_SEGMENTS = [
-    (
-        _latch_z0 + (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP),
-        _latch_z0 + (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP) + LATCH_KNUCKLE_W,
-    ),
-]
-_LEVER_Z0, _LEVER_Z1 = LATCH_LEVER_SEGMENTS[0]
+LATCH_WIDTH = 14.0  # Z extent of the whole ridge/tongue/screw assembly
 
-LATCH_PIN_MARGIN = 1.0
-LATCH_PIN_BORE_Z0 = _latch_z0 - LATCH_PIN_MARGIN - 0.5
-LATCH_PIN_BORE_Z1 = _latch_z0 + _latch_span + LATCH_PIN_MARGIN + 0.5
+# The screw itself: real, printable, coarse (2mm pitch) helical threads --
+# fine V-threads don't print reliably at this scale. A separate part
+# (closing_screw.py).
+SCREW_MAJOR_D = 5.0
+SCREW_PITCH = 2.0
+SCREW_THREAD_DEPTH = 0.7
+SCREW_MINOR_D = SCREW_MAJOR_D - 2.0 * SCREW_THREAD_DEPTH
+SCREW_HEAD_D = 9.0
+SCREW_HEAD_H = 3.0
+SCREW_TIP_D = 3.2  # smooth pilot below the threads -- registers in the ridge's blind hole
+SCREW_TIP_ENGAGE = 3.0  # how deep the tip seats into the ridge's hole
 
-# Catch lip (on front) and hook (on the lever), in the lever's own local Y
-# (tangential, away from the split line) and X (radial) directions. Both
-# stay at Y >= LATCH_LIP_Y_MIN, safely beyond every knuckle's own +Y reach
-# (LATCH_KNUCKLE_R), so neither interacts with the pivot knuckles or their
-# clearance cut at all. The lip and the lever's connecting shaft share the
-# lever knuckle's own Z-width but occupy different lanes within it (the
-# shaft has to pass by the lip's own Z on its way from the pivot to the
-# hook); only the hook, at the tip, widens to cover both lanes and reach
-# over the lip.
-LATCH_LIP_Y_MIN = 4.0
-LATCH_LIP_Y_MAX = 7.0
-LATCH_LIP_REACH = 3.0  # protrudes this far beyond R_OUT
-LATCH_LIP_EMBED = 1.5  # extends inboard into the wall band, past its own curvature, for a genuine fused union
-LATCH_LIP_CLEARANCE = 0.4  # gap between the lip and the hook that closes over it
-LATCH_HOOK_Y_MAX = LATCH_LIP_Y_MAX + LATCH_LIP_CLEARANCE + 2.5
+# The tongue (front): a thin arm reaching out over the ridge, widening into
+# a root that embeds into front's own wall where it meets it.
+TONGUE_THK = 5.0  # radial thickness -- matches the screw's threaded length
+TONGUE_HOLE_D = SCREW_MINOR_D - 0.2  # slightly undersized: the screw self-taps on first insertion,
+# the common, reliable approach for a small FDM-printed fastener -- far more robust than modeling a
+# matching internal helical thread and hoping the two meshes clear each other at print tolerance.
+TONGUE_Y_MAX = 3.0  # the root's embed depth past the split line, into front's own wall
+LATCH_GAP = 1.0  # clearance between the tongue's inner face and the ridge's own outer tip --
+# also gives the screw's own helical thread room for its natural start-of-sweep overshoot
+# (a real, if tiny, effect of the swept thread profile) to clear the ridge's hole opening
 
-LATCH_LIP_Z0 = _LEVER_Z0 + 3.0
-LATCH_LIP_Z1 = _LEVER_Z1 - 0.5
-LATCH_SHAFT_Z0 = _LEVER_Z0 + 0.5
-LATCH_SHAFT_Z1 = LATCH_LIP_Z0 - 0.5
-LATCH_HOOK_Z0 = LATCH_SHAFT_Z0 - 0.3
-LATCH_HOOK_Z1 = LATCH_LIP_Z1 + 0.3
+# The ridge (back): a solid block housing the screw tip's blind pocket.
+RIDGE_DEPTH = 6.0  # radial thickness -- houses the blind hole plus wall around it
+RIDGE_EMBED = 2.5  # embeds past R_OUT (and the wall's own curvature across the ridge's Y-span)
+RIDGE_Y_DEPTH = 8.0  # how far the ridge -- and the tongue's overlap over it -- reaches from the split line
+RIDGE_HOLE_D = SCREW_TIP_D + 0.4  # clearance around the screw's smooth tip
+RIDGE_HOLE_DEPTH = 4.0  # 1mm deeper than SCREW_TIP_ENGAGE, so the tip doesn't bottom out
 
-LATCH_SHAFT_X_OUTER = LATCH_AXIS_X - 2.0
-LATCH_SHAFT_X_INNER = -(R_OUT + 0.3)  # stays clear of front's plain wall
-LATCH_HOOK_X_OUTER = -(R_OUT + LATCH_LIP_REACH + LATCH_LIP_CLEARANCE)
+RIDGE_OUTER_X = -(R_OUT + RIDGE_DEPTH)
+RIDGE_INNER_X = -(R_OUT - RIDGE_EMBED)
+TONGUE_INNER_X = RIDGE_OUTER_X - LATCH_GAP
+TONGUE_OUTER_X = TONGUE_INNER_X - TONGUE_THK
+
+LATCH_HOLE_Y = -RIDGE_Y_DEPTH / 2.0  # centered within the ridge's own Y span
+LATCH_HOLE_Z = LATCH_Z_CENTER
 
 # Dispensing slit (front apex X=0, Y=+R_OUT)
 SLOT_LEN = 40.0
@@ -372,77 +346,66 @@ def mount_features() -> tuple[bd.Shape, bd.Shape]:
     return add, cut
 
 
-def latch_pivot_fixed() -> bd.Shape:
-    """Back's fixed half of the latch pivot: full-round knuckle bosses
-    (LATCH_FIXED_SEGMENTS) pierced by the latch pin bore -- the same
-    knuckle_row() the hinge itself uses, just at the latch's own axis and
-    a smaller radius."""
-    return knuckle_row(LATCH_AXIS_X, LATCH_AXIS_Y, LATCH_KNUCKLE_R, LATCH_PIN_R,
-                        LATCH_FIXED_SEGMENTS, LATCH_PIN_BORE_Z0, LATCH_PIN_BORE_Z1)
+def _x_cylinder(radius: float, length: float, y: float, z: float, x0: float) -> bd.Shape:
+    """A cylinder whose axis runs along X (radially), base at x0, extending
+    toward +X (inboard, toward the tube's center)."""
+    cyl = bd.Cylinder(
+        radius, length,
+        align=(bd.Align.CENTER, bd.Align.CENTER, bd.Align.MIN),
+        rotation=(0.0, 90.0, 0.0),
+    )
+    return bd.Pos(x0, y, z) * cyl
 
 
-def latch_pivot_envelope_cut(protect_segments: list[tuple[float, float]] = ()) -> bd.Shape:
-    """Clears the latch pivot's full footprint from a body, minus
-    `protect_segments` (that body's own, already-fused knuckles, if any).
-    Back passes its own LATCH_FIXED_SEGMENTS to protect them; front owns
-    nothing at the pivot, so it passes nothing and gets the full cut."""
-    return knuckle_envelope_cut(LATCH_AXIS_X, LATCH_AXIS_Y, LATCH_KNUCKLE_R,
-                                 LATCH_PIN_BORE_Z0, LATCH_PIN_BORE_Z1, protect_segments)
-
-
-def reinforce_latch_pivot(body: bd.Shape) -> bd.Shape:
-    """Fillet the seam where back's fixed pivot knuckles meet back's own
-    outer wall face -- same technique as reinforce_hinge(). Back occupies
-    Y<=0, so sign=+1 here picks the negative-Y (back's own) crossing point,
-    same convention as reinforce_hinge(front=False)."""
-    return reinforce_seam(body, LATCH_AXIS_X, LATCH_AXIS_Y, LATCH_KNUCKLE_R, R_OUT, 1.0,
-                           LATCH_FIXED_SEGMENTS, LATCH_FILLET_R)
-
-
-def latch_lever_arm() -> bd.Shape:
-    """The lever's own hook and connecting shaft (its pivot knuckle comes
-    from knuckle_row() separately, in latch_lever.py). Both stay entirely
-    at Y >= LATCH_KNUCKLE_R -- clear of the pivot knuckles and their
-    envelope cut -- and at X beyond R_OUT, clear of front's plain wall.
-
-    The shaft runs from the knuckle to the hook down a Z lane that avoids
-    front's catch lip (latch_catch_lip()); the hook then widens in Z to
-    reach over the lip from the outside, blocking it (and so the whole
-    front leaf) from swinging open -- the same physical principle as the
-    old hook-and-window catch, just via a separate rigid, pivoting part
-    instead of an integral flexing one.
+def latch_ridge() -> bd.Shape:
+    """Back's raised ridge at the closing edge: a solid block the screw's
+    tip presses against but can never pass. Embedded RIDGE_EMBED past
+    R_OUT -- and past the wall's own curvature across the ridge's Y-span
+    -- for a genuine fused union with back's wall.
     """
-    shaft = bd.Box(
-        LATCH_SHAFT_X_INNER - LATCH_SHAFT_X_OUTER, LATCH_HOOK_Y_MAX, LATCH_SHAFT_Z1 - LATCH_SHAFT_Z0,
-        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.MIN),
+    ridge = bd.Box(
+        RIDGE_INNER_X - RIDGE_OUTER_X, RIDGE_Y_DEPTH, LATCH_WIDTH,
+        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
     )
-    shaft = bd.Pos(LATCH_SHAFT_X_OUTER, 0.0, LATCH_SHAFT_Z0) * shaft
-
-    hook_y0 = LATCH_LIP_Y_MAX + LATCH_LIP_CLEARANCE
-    hook = bd.Box(
-        LATCH_SHAFT_X_INNER - LATCH_HOOK_X_OUTER, LATCH_HOOK_Y_MAX - hook_y0, LATCH_HOOK_Z1 - LATCH_HOOK_Z0,
-        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.MIN),
-    )
-    hook = bd.Pos(LATCH_HOOK_X_OUTER, hook_y0, LATCH_HOOK_Z0) * hook
-
-    return shaft + hook
+    return bd.Pos(RIDGE_OUTER_X, -RIDGE_Y_DEPTH, LATCH_HOLE_Z) * ridge
 
 
-def latch_catch_lip() -> bd.Shape:
-    """Front's static catch: a lip protruding LATCH_LIP_REACH beyond
-    R_OUT, embedded LATCH_LIP_EMBED inboard of R_OUT to guarantee a
-    genuine fused union with front's own curved wall (the wall's actual
-    surface bows inward across the lip's Y-span, so a flat-faced lip needs
-    real embed depth, not just nominal contact at Y=0). Sits entirely
-    beyond the pivot knuckles' own Y-reach -- see latch_lever_arm().
+def latch_ridge_hole() -> bd.Shape:
+    """The blind, unthreaded pocket in the ridge that registers the
+    screw's smooth tip -- this is what keeps the tongue (and so front)
+    from sliding sideways once the screw is seated, not just pulling
+    straight off; a flat stop face alone wouldn't resist that.
     """
-    x0 = -(R_OUT + LATCH_LIP_REACH)
-    x1 = -R_OUT + LATCH_LIP_EMBED
-    lip = bd.Box(
-        x1 - x0, LATCH_LIP_Y_MAX - LATCH_LIP_Y_MIN, LATCH_LIP_Z1 - LATCH_LIP_Z0,
-        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.MIN),
+    return _x_cylinder(RIDGE_HOLE_D / 2.0, RIDGE_HOLE_DEPTH, LATCH_HOLE_Y, LATCH_HOLE_Z, RIDGE_OUTER_X)
+
+
+def latch_tongue() -> bd.Shape:
+    """Front's tongue: a thin arm reaching out over the ridge (clear of it
+    by LATCH_GAP), plus a root that embeds into front's own wall where the
+    arm meets it (Y >= 0) -- an L-shape in cross-section. The root's own X
+    reach is a superset of the arm's; the overlap between them is harmless
+    (just redundant material from the union), so one box each keeps this
+    simple rather than trimming them to be disjoint.
+    """
+    arm = bd.Box(
+        TONGUE_INNER_X - TONGUE_OUTER_X, RIDGE_Y_DEPTH + TONGUE_Y_MAX, LATCH_WIDTH,
+        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
     )
-    return bd.Pos(x0, LATCH_LIP_Y_MIN, LATCH_LIP_Z0) * lip
+    arm = bd.Pos(TONGUE_OUTER_X, -RIDGE_Y_DEPTH, LATCH_HOLE_Z) * arm
+
+    root = bd.Box(
+        RIDGE_INNER_X - TONGUE_OUTER_X, TONGUE_Y_MAX, LATCH_WIDTH,
+        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
+    )
+    root = bd.Pos(TONGUE_OUTER_X, 0.0, LATCH_HOLE_Z) * root
+
+    return arm + root
+
+
+def latch_tongue_hole() -> bd.Shape:
+    """The tongue's own pilot hole for the screw -- see TONGUE_HOLE_D."""
+    return _x_cylinder(TONGUE_HOLE_D / 2.0, TONGUE_INNER_X - TONGUE_OUTER_X,
+                        LATCH_HOLE_Y, LATCH_HOLE_Z, TONGUE_OUTER_X)
 
 
 def dispense_slot() -> bd.Shape:

@@ -3,16 +3,14 @@ from cadgen import step
 
 from lib.canister import (
     BACK_KNUCKLE_SEGMENTS,
-    LATCH_FIXED_SEGMENTS,
     dome_cap,
     half_shell,
     hinge_envelope_cut,
     hinge_knuckles,
-    latch_pivot_envelope_cut,
-    latch_pivot_fixed,
+    latch_ridge,
+    latch_ridge_hole,
     mount_features,
     reinforce_hinge,
-    reinforce_latch_pivot,
 )
 
 
@@ -24,9 +22,7 @@ def canister_back():
     body = reinforce_hinge(body, front=False, segments=BACK_KNUCKLE_SEGMENTS)
     body = body - hinge_envelope_cut(own_segments=BACK_KNUCKLE_SEGMENTS)
 
-    body = body + latch_pivot_fixed()
-    body = reinforce_latch_pivot(body)
-    body = body - latch_pivot_envelope_cut(protect_segments=LATCH_FIXED_SEGMENTS)
+    body = body + latch_ridge() - latch_ridge_hole()
 
     mount_add, mount_cut = mount_features()
     body = body + mount_add - mount_cut
