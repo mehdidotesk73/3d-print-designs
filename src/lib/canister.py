@@ -82,18 +82,26 @@ MOUNT_BOSS_HEIGHT = 3.0
 _mount_usable = LENGTH - 2.0 * END_MARGIN
 MOUNT_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
 
-# Closing latch (edge at X=-R_OUT): a raised RIDGE on the back's closing
-# edge is a solid, unthreaded barrier. A threaded SCREW, twisted through a
-# matching hole in a TONGUE on the front's closing edge, presses its tip
-# down until it's blocked by the ridge -- the ridge simply can't be passed.
-# Once tightened, the screw (captive in the tongue's own thread) becomes a
-# rigid strut between front's tongue and back's ridge: pulling front open
-# would need the screw to either compress further into the ridge (blocked)
-# or unscrew itself (a rotation, not a pull) -- no flex, no separate pivot,
-# nothing to hinge or snap. Replaces both the earlier cantilever hook and
-# the pivoting lever with the simplest mechanism yet: a single screw.
+# Closing latch (edge at X=-R_OUT): a screw self-taps into a threaded
+# SCREW FASTENING HOLE in front's TAB, then tightens until its smooth tip
+# advances into a plain, oversized clearance BORE straight through back's
+# own wall -- not threaded, not fastened there at all, just resting with
+# clearance. This alone resists the hinge opening: the screw is rigid with
+# front (fixed via the fastening thread), and its tip sits inside a
+# snug-clearance hole in back, so the pair act like a dowel pin spanning
+# the joint. As front tries to rotate open about the main hinge, the latch
+# edge moves mostly TANGENTIALLY (not straight outward) -- and that's
+# exactly the motion the bore blocks: the tip immediately meets the bore's
+# own side wall rather than being free to slide.
+#
+# An earlier version of this raised a solid ridge on back for the screw
+# tip to press into -- but back's own wall (whatever its thickness)
+# already provides the depth to register the tip, so the ridge did the
+# identical restraint job with extra material and extra geometry, for no
+# extra strength. Dropped entirely; the bore just goes straight into the
+# plain wall.
 LATCH_Z_CENTER = LENGTH / 2.0
-LATCH_WIDTH = 14.0  # Z extent of the whole ridge/tongue/screw assembly
+LATCH_WIDTH = 14.0  # Z extent of the whole tab/screw assembly
 
 # The screw itself: real, printable, coarse (2mm pitch) helical threads --
 # fine V-threads don't print reliably at this scale. A separate part
@@ -104,33 +112,37 @@ SCREW_THREAD_DEPTH = 0.7
 SCREW_MINOR_D = SCREW_MAJOR_D - 2.0 * SCREW_THREAD_DEPTH
 SCREW_HEAD_D = 9.0
 SCREW_HEAD_H = 3.0
-SCREW_TIP_D = 3.2  # smooth pilot below the threads -- registers in the ridge's blind hole
-SCREW_TIP_ENGAGE = 3.0  # how deep the tip seats into the ridge's hole
+SCREW_TIP_D = 3.2  # smooth pilot below the threads -- registers in back's clearance bore
+SCREW_TIP_ENGAGE = 2.5  # how deep the tip seats into back's bore -- short of WALL, so it
+# stays clear of poking out into the cavity
 
-# The tongue (front): a thin arm reaching out over the ridge, widening into
-# a root that embeds into front's own wall where it meets it.
-TONGUE_THK = 5.0  # radial thickness -- matches the screw's threaded length
-TONGUE_HOLE_D = SCREW_MINOR_D - 0.2  # slightly undersized: the screw self-taps on first insertion,
+# The tab (front): a thin arm reaching to rest against back's own outer
+# wall, widening into a root that embeds into front's own wall where it
+# meets it.
+TAB_THK = 5.0  # radial thickness -- matches the screw's threaded length
+FASTENING_HOLE_D = SCREW_MINOR_D - 0.2  # slightly undersized: the screw self-taps on first insertion,
 # the common, reliable approach for a small FDM-printed fastener -- far more robust than modeling a
 # matching internal helical thread and hoping the two meshes clear each other at print tolerance.
-TONGUE_Y_MAX = 3.0  # the root's embed depth past the split line, into front's own wall
-LATCH_GAP = 1.0  # clearance between the tongue's inner face and the ridge's own outer tip --
-# also gives the screw's own helical thread room for its natural start-of-sweep overshoot
-# (a real, if tiny, effect of the swept thread profile) to clear the ridge's hole opening
+TAB_EMBED = 2.5  # the root's embed depth past R_OUT into front's own wall, past its own curvature
+TAB_Y_DEPTH = 8.0  # how far the tab's own arm reaches from the split line
+LATCH_GAP = 1.0  # clearance between the tab's inner face and back's own outer wall -- also gives
+# the screw's own helical thread room for its natural start-of-sweep overshoot (a real, if tiny,
+# effect of the swept thread profile) to clear back's wall around the bore's own opening
 
-# The ridge (back): a solid block housing the screw tip's blind pocket.
-RIDGE_DEPTH = 6.0  # radial thickness -- houses the blind hole plus wall around it
-RIDGE_EMBED = 2.5  # embeds past R_OUT (and the wall's own curvature across the ridge's Y-span)
-RIDGE_Y_DEPTH = 8.0  # how far the ridge -- and the tongue's overlap over it -- reaches from the split line
-RIDGE_HOLE_D = SCREW_TIP_D + 0.4  # clearance around the screw's smooth tip
-RIDGE_HOLE_DEPTH = 4.0  # 1mm deeper than SCREW_TIP_ENGAGE, so the tip doesn't bottom out
+# Back's own wall: a plain, unthreaded, oversized clearance bore straight
+# through it (from its outer face into the cavity) -- large enough that
+# the screw's smooth tip can never bind or thread into it. Oversized in
+# length (not just diameter) so it fully pierces the wall regardless of
+# the wall's own curvature this close to the split line.
+BACK_BORE_D = SCREW_TIP_D + 0.4  # clearance around the screw's smooth tip
+BACK_BORE_X0 = -(R_OUT + 1.0)
+BACK_BORE_DEPTH = WALL + 2.0
 
-RIDGE_OUTER_X = -(R_OUT + RIDGE_DEPTH)
-RIDGE_INNER_X = -(R_OUT - RIDGE_EMBED)
-TONGUE_INNER_X = RIDGE_OUTER_X - LATCH_GAP
-TONGUE_OUTER_X = TONGUE_INNER_X - TONGUE_THK
+TAB_INNER_X = -R_OUT - LATCH_GAP
+TAB_OUTER_X = TAB_INNER_X - TAB_THK
+TAB_ROOT_INNER_X = -(R_OUT - TAB_EMBED)
 
-LATCH_HOLE_Y = -RIDGE_Y_DEPTH / 2.0  # centered within the ridge's own Y span
+LATCH_HOLE_Y = -TAB_Y_DEPTH / 2.0  # centered within the tab's own Y span
 LATCH_HOLE_Z = LATCH_Z_CENTER
 
 # Dispensing slit (front apex X=0, Y=+R_OUT)
@@ -357,55 +369,47 @@ def _x_cylinder(radius: float, length: float, y: float, z: float, x0: float) -> 
     return bd.Pos(x0, y, z) * cyl
 
 
-def latch_ridge() -> bd.Shape:
-    """Back's raised ridge at the closing edge: a solid block the screw's
-    tip presses against but can never pass. Embedded RIDGE_EMBED past
-    R_OUT -- and past the wall's own curvature across the ridge's Y-span
-    -- for a genuine fused union with back's wall.
-    """
-    ridge = bd.Box(
-        RIDGE_INNER_X - RIDGE_OUTER_X, RIDGE_Y_DEPTH, LATCH_WIDTH,
-        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
-    )
-    return bd.Pos(RIDGE_OUTER_X, -RIDGE_Y_DEPTH, LATCH_HOLE_Z) * ridge
-
-
-def latch_ridge_hole() -> bd.Shape:
-    """The blind, unthreaded pocket in the ridge that registers the
-    screw's smooth tip -- this is what keeps the tongue (and so front)
-    from sliding sideways once the screw is seated, not just pulling
-    straight off; a flat stop face alone wouldn't resist that.
-    """
-    return _x_cylinder(RIDGE_HOLE_D / 2.0, RIDGE_HOLE_DEPTH, LATCH_HOLE_Y, LATCH_HOLE_Z, RIDGE_OUTER_X)
-
-
-def latch_tongue() -> bd.Shape:
-    """Front's tongue: a thin arm reaching out over the ridge (clear of it
-    by LATCH_GAP), plus a root that embeds into front's own wall where the
-    arm meets it (Y >= 0) -- an L-shape in cross-section. The root's own X
-    reach is a superset of the arm's; the overlap between them is harmless
-    (just redundant material from the union), so one box each keeps this
-    simple rather than trimming them to be disjoint.
+def latch_tab() -> bd.Shape:
+    """Front's tab: a thin arm reaching to rest against back's own outer
+    wall (clear of it by LATCH_GAP), plus a root that embeds into front's
+    own wall where the arm meets it (Y >= 0) -- an L-shape in
+    cross-section. The root's own X reach is a superset of the arm's; the
+    overlap between them is harmless (just redundant material from the
+    union), so one box each keeps this simple rather than trimming them
+    to be disjoint.
     """
     arm = bd.Box(
-        TONGUE_INNER_X - TONGUE_OUTER_X, RIDGE_Y_DEPTH + TONGUE_Y_MAX, LATCH_WIDTH,
+        TAB_INNER_X - TAB_OUTER_X, TAB_Y_DEPTH + TAB_EMBED, LATCH_WIDTH,
         align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
     )
-    arm = bd.Pos(TONGUE_OUTER_X, -RIDGE_Y_DEPTH, LATCH_HOLE_Z) * arm
+    arm = bd.Pos(TAB_OUTER_X, -TAB_Y_DEPTH, LATCH_HOLE_Z) * arm
 
     root = bd.Box(
-        RIDGE_INNER_X - TONGUE_OUTER_X, TONGUE_Y_MAX, LATCH_WIDTH,
+        TAB_ROOT_INNER_X - TAB_OUTER_X, TAB_EMBED, LATCH_WIDTH,
         align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
     )
-    root = bd.Pos(TONGUE_OUTER_X, 0.0, LATCH_HOLE_Z) * root
+    root = bd.Pos(TAB_OUTER_X, 0.0, LATCH_HOLE_Z) * root
 
     return arm + root
 
 
-def latch_tongue_hole() -> bd.Shape:
-    """The tongue's own pilot hole for the screw -- see TONGUE_HOLE_D."""
-    return _x_cylinder(TONGUE_HOLE_D / 2.0, TONGUE_INNER_X - TONGUE_OUTER_X,
-                        LATCH_HOLE_Y, LATCH_HOLE_Z, TONGUE_OUTER_X)
+def latch_tab_fastening_hole() -> bd.Shape:
+    """The tab's own threaded screw fastening hole -- see FASTENING_HOLE_D."""
+    return _x_cylinder(FASTENING_HOLE_D / 2.0, TAB_INNER_X - TAB_OUTER_X,
+                        LATCH_HOLE_Y, LATCH_HOLE_Z, TAB_OUTER_X)
+
+
+def latch_back_bore() -> bd.Shape:
+    """The plain, unthreaded clearance bore through back's own wall that
+    the screw's smooth tip advances into once tightened -- not fastened
+    there at all, just resting with clearance. This is what actually
+    resists the hinge opening: the screw is rigid with front (fixed via
+    the tab's fastening thread), and its tip sits inside this
+    snug-clearance hole in back, so the pair act like a dowel pin spanning
+    the joint -- front's latch edge moves mostly tangentially as it tries
+    to swing open, and that's exactly the motion this bore blocks.
+    """
+    return _x_cylinder(BACK_BORE_D / 2.0, BACK_BORE_DEPTH, LATCH_HOLE_Y, LATCH_HOLE_Z, BACK_BORE_X0)
 
 
 def dispense_slot() -> bd.Shape:

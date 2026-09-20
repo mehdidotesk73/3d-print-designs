@@ -11,16 +11,16 @@ from lib.canister import (
     SCREW_THREAD_DEPTH,
     SCREW_TIP_D,
     SCREW_TIP_ENGAGE,
-    TONGUE_THK,
+    TAB_THK,
 )
 
 # Local frame: Z=0 is the tip's own end (the deepest point once seated in
-# the ridge's blind hole), increasing toward the head. Placed in the
+# back's clearance bore), increasing toward the head. Placed in the
 # assembly by rotating -90 about Y (mapping local +Z to world -X) and
 # translating so the tip lands at its seated depth -- see
 # dispenser_assembly.py.
 TIP_LEN = LATCH_GAP + SCREW_TIP_ENGAGE
-THREAD_LEN = TONGUE_THK
+THREAD_LEN = TAB_THK
 SCREW_LENGTH = TIP_LEN + THREAD_LEN + SCREW_HEAD_H
 
 

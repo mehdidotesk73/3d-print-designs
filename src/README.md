@@ -15,9 +15,9 @@ a normal, and a pin radius. See **Hinge construction** below.
 
 | Script | Output | Purpose |
 | --- | --- | --- |
-| lib/canister.py | (no output) | Shared geometry: shell, dome caps, generic knuckle-pivot module, mount bosses, latch ridge/tongue, dispensing slot |
-| canister_back.py | STEP/canister_back.step, STL/canister_back.stl | Wall-mount half: 2x screw holes + counterbore at the apex, hinge knuckles, latch's raised ridge |
-| canister_front.py | STEP/canister_front.step, STL/canister_front.stl | Hinged half with the dispensing slit and the latch's tongue |
+| lib/canister.py | (no output) | Shared geometry: shell, dome caps, generic knuckle-pivot module, mount bosses, latch tab/back-bore, dispensing slot |
+| canister_back.py | STEP/canister_back.step, STL/canister_back.stl | Wall-mount half: 2x screw holes + counterbore at the apex, hinge knuckles, latch's plain clearance bore |
+| canister_front.py | STEP/canister_front.step, STL/canister_front.stl | Hinged half with the dispensing slit and the latch's tab |
 | hinge_pin.py | STEP/hinge_pin.step, STL/hinge_pin.stl | 3mm rod spanning the interleaved hinge knuckles |
 | closing_screw.py | STEP/closing_screw.step, STL/closing_screw.stl | The latch itself: a threaded screw with a real, printable helical thread |
 | dispenser_assembly.py | STEP/dispenser_assembly.step | All four parts placed in their closed, assembled position |
@@ -26,7 +26,7 @@ Build everything: `python src/dispenser_assembly.py` from the project root.
 Checks: `python checks/check_dispenser.py` (topology, dimensions, dome
 sealing, and interference across all four parts — all pass with zero
 overlap volume, except the screw's deliberate self-tapping engagement with
-the tongue, checked separately for being genuine but not excessive).
+the tab, checked separately for being genuine but not excessive).
 
 Preview: an interactive STL viewer (three.js) is published as a Claude
 Artifact — see the conversation for the link. Chromium snapshot rendering
@@ -55,7 +55,7 @@ and fillets it into whichever body owns each knuckle. This is reusable
 as-is for any similar rotating joint on a split shell in another project
 -- pass a different edge/normal/radii and it works the same way (it's
 also what the latch's own earlier pivoting-lever design used, before that
-was replaced by the simpler screw-and-ridge closure below).
+was replaced by the simpler screw-and-tab closure below).
 
 1. **Generation**: `knuckle_row()` slices the joint's full-length bulk
    cylinder (a given knuckle radius) into segments (pushed apart by a gap
@@ -97,43 +97,66 @@ whole hinge, open to free air past both ends of the knuckle row.
 ## Latch
 
 The dispenser closes with a single threaded screw (`closing_screw.py`) --
-no pivot, no flex, no separate lever. Back's closing edge (X=-R_OUT) has a
-raised, solid **ridge** (`latch_ridge()`); front's closing edge has a
-**tongue** (`latch_tongue()`) that reaches out over it, with a threaded
-hole. Screwing the closing screw down through the tongue drives its tip
-toward the ridge until it's physically blocked -- the ridge is solid and
-unthreaded, so the screw simply cannot pass it. Once seated, the screw is
-a rigid strut between front's tongue and back's ridge: pulling front open
-would need the screw to either compress further into the ridge (blocked)
-or unscrew itself (a rotation, not a pull). This replaced two earlier,
-more complex closures in turn -- a cantilever snap hook (needed a flex
-point to both engage and release from one swing) and a separate rigid
-pivoting lever (needed its own mini hinge, pin, and interleaved knuckle
-row) -- with the simplest mechanism yet: one screw doing the whole job.
+no pivot, no flex, no separate lever. Front's closing edge has a **tab**
+(`latch_tab()`) that reaches across the split line to rest against back's
+own outer wall (clear of it by `LATCH_GAP`), with a threaded **screw
+fastening hole** (`latch_tab_fastening_hole()`). Back's closing edge
+(X=-R_OUT) just has a plain, unthreaded clearance **bore**
+(`latch_back_bore()`) straight through its own wall -- no raised feature
+at all. Screwing the closing screw into the tab's fastening hole makes the
+screw rigid with front; as it tightens, its smooth tip advances into
+back's bore and comes to rest there with clearance, not fastened to back
+in any way.
 
-- **Ridge**: a solid block, embedded `RIDGE_EMBED` past R_OUT (and past
-  the wall's own curvature across the ridge's Y-span) for a genuine fused
-  union with back's wall. Houses a blind, *unthreaded* pilot pocket
-  (`latch_ridge_hole()`) that registers the screw's smooth tip -- this is
-  what actually keeps the tongue from sliding sideways once seated, not
-  just pulling straight off; a flat stop face alone wouldn't resist that.
-- **Tongue**: an L-shaped cross-section -- a thin arm reaching out over
-  the ridge (clear of it by `LATCH_GAP`), widening into a root that embeds
-  into front's own wall where the arm meets it. Its own hole
-  (`latch_tongue_hole()`) is deliberately *undersized* against the screw's
-  thread minor diameter (self-tapping): the screw cuts its own channel on
-  first insertion, the common, reliable approach for a small FDM-printed
-  fastener -- far more robust than modeling a matching internal helical
-  thread and hoping the two meshes clear each other at print tolerance.
+That alone is enough to resist the hinge opening. Front pivots open about
+the main hinge (the opposite edge), so as it swings, the latch edge moves
+mostly *tangentially*, not radially outward -- and tangential motion is
+exactly what the bore's own side wall blocks: the screw's tip immediately
+meets it rather than being free to slide away. The screw-and-tip pair acts
+like a dowel pin spanning the joint. An earlier version of this raised a
+solid ridge on back for the screw tip to press into as a hard stop, but
+back's own wall (whatever its thickness) already provides the depth to
+register the tip the same way -- the ridge did the identical restraint job
+with extra material and extra geometry, for no extra strength, so it was
+dropped. This replaced two earlier, more complex closures in turn -- a
+cantilever snap hook (needed a flex point to both engage and release from
+one swing) and a separate rigid pivoting lever (needed its own mini hinge,
+pin, and interleaved knuckle row) -- with the simplest mechanism yet: one
+screw doing the whole job, no raised features on either leaf.
+
+- **Tab**: an L-shaped cross-section -- a thin arm reaching out to rest
+  against back's own wall (clear of it by `LATCH_GAP`, which also gives
+  the screw thread's own natural start-of-sweep overshoot room to clear
+  back's wall around the bore's opening), widening into a root that embeds
+  `TAB_EMBED` past R_OUT into front's own wall where the arm meets it. Its
+  own fastening hole (`FASTENING_HOLE_D`) is deliberately *undersized*
+  against the screw's thread minor diameter (self-tapping): the screw cuts
+  its own channel on first insertion, the common, reliable approach for a
+  small FDM-printed fastener -- far more robust than modeling a matching
+  internal helical thread and hoping the two meshes clear each other at
+  print tolerance.
+- **Back's bore**: a plain, unthreaded, oversized clearance bore straight
+  through back's own wall (`BACK_BORE_D`, `BACK_BORE_DEPTH`) -- large
+  enough that the screw's smooth tip can never bind or thread into it, and
+  oversized in length (not just diameter) so it fully pierces the wall
+  regardless of the wall's own curvature this close to the split line.
+  `SCREW_TIP_ENGAGE` (how deep the tip seats) stays short of `WALL`, so the
+  tip never pokes out into the cavity.
 - **Screw**: a real, printable helical thread (coarse, 2mm pitch --
   fine V-threads don't print reliably at this scale), swept via
   `Helix`+`sweep` onto a core cylinder at the thread's minor diameter, a
   smooth pilot tip below it, and a head above for turning by hand.
 
 Checks confirm zero interference between every part pair *except* the
-screw against the tongue, which is checked separately for being a
+screw against the tab, which is checked separately for being a
 genuine, real self-tapping engagement (present and in a sane range) --
-not a bug, but the whole reason the latch holds.
+not a bug, but the whole reason the latch holds. A dedicated check also
+cross-verifies the screw's actual assembled placement (its bounding box)
+against the tip-engagement formula in `dispenser_assembly.py`, since the
+placement math there has to measure engagement depth from back's real
+outer wall surface (-R_OUT), not from the bore's own oversized cutting
+margin -- getting that wrong would silently shift the whole screw (and its
+thread) off the tab despite every build step succeeding.
 
 ## Dispensing slit
 

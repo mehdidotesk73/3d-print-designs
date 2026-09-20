@@ -8,8 +8,8 @@ from lib.canister import (
     half_shell,
     hinge_envelope_cut,
     hinge_knuckles,
-    latch_tongue,
-    latch_tongue_hole,
+    latch_tab,
+    latch_tab_fastening_hole,
     reinforce_hinge,
 )
 
@@ -22,7 +22,7 @@ def canister_front():
     body = reinforce_hinge(body, front=True, segments=FRONT_KNUCKLE_SEGMENTS)
     body = body - hinge_envelope_cut(own_segments=FRONT_KNUCKLE_SEGMENTS)
 
-    body = body + latch_tongue() - latch_tongue_hole()
+    body = body + latch_tab() - latch_tab_fastening_hole()
 
     body = body - dispense_slot()
 

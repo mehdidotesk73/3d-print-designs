@@ -11,7 +11,7 @@ from lib.canister import (
     LATCH_HOLE_Z,
     PIN_BORE_Z0,
     PIN_BORE_Z1,
-    RIDGE_OUTER_X,
+    R_OUT,
     SCREW_TIP_ENGAGE,
 )
 
@@ -31,12 +31,15 @@ def dispenser_assembly():
 
     # Local frame: Z=0 is the tip's own end, increasing toward the head.
     # Rotating -90 about Y maps local +Z to world -X (the direction the
-    # screw points as it's driven in, from the tongue's outer face toward
-    # the ridge); the tip's end then lands at its seated depth within the
-    # ridge's blind hole.
+    # screw points as it's driven in, from the tab's outer face toward
+    # back); the tip's end then lands at its seated depth within back's
+    # own clearance bore, measured from back's actual outer wall surface
+    # (-R_OUT) -- not BACK_BORE_X0, which has an extra 1mm overshoot
+    # margin baked in purely so the subtracted bore cylinder fully
+    # penetrates back's wall regardless of local curvature.
     screw = closing_screw()
     screw = screw.rotate(bd.Axis.Y, -90.0)
-    tip_end_x = RIDGE_OUTER_X + SCREW_TIP_ENGAGE
+    tip_end_x = -R_OUT + SCREW_TIP_ENGAGE
     screw = bd.Pos(tip_end_x, LATCH_HOLE_Y, LATCH_HOLE_Z) * screw
     screw.label = "closing_screw"
 

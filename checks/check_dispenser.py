@@ -17,9 +17,14 @@ from cadgen.geometry import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from closing_screw import SCREW_LENGTH  # noqa: E402
 from lib.canister import (  # noqa: E402
+    BACK_BORE_D,
+    BACK_BORE_DEPTH,
+    BACK_BORE_X0,
     BACK_KNUCKLE_SEGMENTS,
     END_MARGIN,
+    FASTENING_HOLE_D,
     FRONT_KNUCKLE_SEGMENTS,
     HINGE_AXIS_X,
     HINGE_Z_MAX,
@@ -28,6 +33,7 @@ from lib.canister import (  # noqa: E402
     LATCH_GAP,
     LATCH_HOLE_Y,
     LATCH_HOLE_Z,
+    LATCH_WIDTH,
     LENGTH,
     MOUNT_HOLE_D,
     MOUNT_Z,
@@ -36,12 +42,6 @@ from lib.canister import (  # noqa: E402
     PIN_R,
     R_IN,
     R_OUT,
-    RIDGE_EMBED,
-    RIDGE_HOLE_D,
-    RIDGE_HOLE_DEPTH,
-    RIDGE_INNER_X,
-    RIDGE_OUTER_X,
-    RIDGE_Y_DEPTH,
     ROLL_DIAMETER,
     ROLL_LENGTH,
     SCREW_MINOR_D,
@@ -49,10 +49,12 @@ from lib.canister import (  # noqa: E402
     SCREW_TIP_ENGAGE,
     SLOT_LEN,
     SLOT_WIDTH,
-    TONGUE_HOLE_D,
-    TONGUE_INNER_X,
-    TONGUE_OUTER_X,
-    TONGUE_Y_MAX,
+    TAB_EMBED,
+    TAB_INNER_X,
+    TAB_OUTER_X,
+    TAB_ROOT_INNER_X,
+    TAB_Y_DEPTH,
+    WALL,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -145,28 +147,29 @@ def main() -> None:
     )
 
     # OD: max radial extent of back (the hinge knuckle boss's outer reach on
-    # one side, the closing ridge's own outer face on the other).
+    # one side; the latch side now has no protrusion of its own -- the ridge
+    # is gone, back's latch-side extent is just its plain wall at R_OUT).
     x_span_back = bb_back.max.X - bb_back.min.X
     y_extent_back = -bb_back.min.Y  # apex distance from split plane
-    expected_x_span = (HINGE_AXIS_X + KNUCKLE_R) + (-RIDGE_OUTER_X)
+    expected_x_span = (HINGE_AXIS_X + KNUCKLE_R) + R_OUT
     check(
-        "back X span (tangent hinge knuckle to ridge's outer face)",
+        "back X span (tangent hinge knuckle to plain latch-side wall)",
         abs(x_span_back - expected_x_span) < 1.0,
         f"{x_span_back:.3f} mm (expected ~{expected_x_span} mm: "
-        f"hinge knuckle outer reach + ridge outer reach)",
+        f"hinge knuckle outer reach + back's own R_OUT, no ridge)",
     )
 
-    # Front's own X span, similarly -- the tongue reaches even further
-    # outboard than the ridge (it has to clear the ridge's own outer face
-    # by LATCH_GAP), so it's front's own extreme on that side now.
+    # Front's own X span, similarly -- the tab reaches outboard past R_OUT
+    # (clear of back's own wall by LATCH_GAP, plus its own thickness), so
+    # it's front's own extreme on that side.
     bb_front = front_solid.bounding_box()
     x_span_front = bb_front.max.X - bb_front.min.X
-    expected_x_span_front = (HINGE_AXIS_X + KNUCKLE_R) + (-TONGUE_OUTER_X)
+    expected_x_span_front = (HINGE_AXIS_X + KNUCKLE_R) + (-TAB_OUTER_X)
     check(
-        "front X span (tangent hinge knuckle to tongue's outer face)",
+        "front X span (tangent hinge knuckle to tab's outer face)",
         abs(x_span_front - expected_x_span_front) < 1.0,
         f"{x_span_front:.3f} mm (expected ~{expected_x_span_front} mm: "
-        f"hinge knuckle outer reach + tongue outer reach)",
+        f"hinge knuckle outer reach + tab outer reach)",
     )
     check(
         "back apex radius (wall-facing extent)",
@@ -255,8 +258,8 @@ def main() -> None:
         f"overlap volume = {pin_overlap_front:.6f} mm^3",
     )
 
-    # The screw's tip must not collide with the ridge's own material (it
-    # only ever occupies the blind hole's clearance) or the hinge pin.
+    # The screw's tip must not collide with back's own wall material (it
+    # only ever occupies the clearance bore) or the hinge pin.
     screw_overlap_back = overlap_volume(screw_solid, back_solid)
     screw_overlap_pin = overlap_volume(screw_solid, pin_solid)
     check(
@@ -271,26 +274,27 @@ def main() -> None:
     )
 
     # Screw vs front is the ONE deliberate exception to zero interference:
-    # the tongue's pilot hole (TONGUE_HOLE_D) is undersized against the
-    # screw's own thread (self-tapping, the common approach for a small
-    # FDM-printed fastener -- the screw cuts its own channel on first
-    # insertion, rather than modeling a separate matching internal thread
-    # and hoping the two meshes clear each other at print tolerance). A
-    # real screw-boss self-tap always has *some* calculated interference by
-    # design; check it's genuinely engaged (not accidentally zero, which
-    # would mean the hole isn't actually undersized) without being
-    # absurdly large (which would mean the pilot hole is misconfigured).
+    # the tab's own screw fastening hole (FASTENING_HOLE_D) is undersized
+    # against the screw's own thread (self-tapping, the common approach for
+    # a small FDM-printed fastener -- the screw cuts its own channel on
+    # first insertion, rather than modeling a separate matching internal
+    # thread and hoping the two meshes clear each other at print
+    # tolerance). A real screw-boss self-tap always has *some* calculated
+    # interference by design; check it's genuinely engaged (not
+    # accidentally zero, which would mean the hole isn't actually
+    # undersized) without being absurdly large (which would mean the
+    # fastening hole is misconfigured).
     screw_overlap_front = overlap_volume(screw_solid, front_solid)
     check(
         "screw vs front: genuine self-tapping engagement (not zero, not excessive)",
         1.0 < screw_overlap_front < 50.0,
         f"overlap volume = {screw_overlap_front:.6f} mm^3 (expected: real but modest -- "
-        f"the pilot hole is undersized on purpose)",
+        f"the fastening hole is undersized on purpose)",
     )
     check(
-        "tongue pilot hole is undersized against the screw's minor diameter (enables self-tapping)",
-        TONGUE_HOLE_D < SCREW_MINOR_D,
-        f"TONGUE_HOLE_D={TONGUE_HOLE_D} mm < SCREW_MINOR_D={SCREW_MINOR_D} mm",
+        "tab's fastening hole is undersized against the screw's minor diameter (enables self-tapping)",
+        FASTENING_HOLE_D < SCREW_MINOR_D,
+        f"FASTENING_HOLE_D={FASTENING_HOLE_D} mm < SCREW_MINOR_D={SCREW_MINOR_D} mm",
     )
 
     # Pin length vs hinge knuckle span, and clear of the domed ends
@@ -446,75 +450,95 @@ def main() -> None:
             f"point {dip_pt} inside back = {back_solid.is_inside(dip_pt)} (expect False, hinge_clearance())",
         )
 
-    # Ridge (back): solid material away from its own blind hole, and the
-    # hole itself reads empty at its mid-depth.
-    ridge_solid_pt = ((RIDGE_OUTER_X + RIDGE_INNER_X) / 2.0, -(RIDGE_Y_DEPTH - 1.0), LATCH_HOLE_Z)
+    # Back's clearance bore: a genuine through-hole (empty at both the outer
+    # face and mid-wall depth), with back's own wall remaining solid just
+    # off to the side of it (no accidental over-cut into the surrounding
+    # material).
+    bore_outer_pt = (-R_OUT + 0.5, LATCH_HOLE_Y, LATCH_HOLE_Z)
+    bore_mid_pt = (-R_OUT + BACK_BORE_DEPTH / 2.0 - 1.0, LATCH_HOLE_Y, LATCH_HOLE_Z)
+    bore_side_pt = (-R_OUT + 0.5, LATCH_HOLE_Y, LATCH_HOLE_Z + LATCH_WIDTH / 2.0 + 2.0)
     check(
-        "ridge is solid material on back (away from its own hole)",
-        back_solid.is_inside(ridge_solid_pt),
-        f"point {ridge_solid_pt} inside back = {back_solid.is_inside(ridge_solid_pt)} (expect True)",
-    )
-    ridge_hole_pt = (RIDGE_OUTER_X + RIDGE_HOLE_DEPTH / 2.0, LATCH_HOLE_Y, LATCH_HOLE_Z)
-    check(
-        "ridge's blind hole is a genuine void at mid-depth",
-        not back_solid.is_inside(ridge_hole_pt),
-        f"point {ridge_hole_pt} inside back = {back_solid.is_inside(ridge_hole_pt)} (expect False)",
+        "back's clearance bore is open at its outer face",
+        not back_solid.is_inside(bore_outer_pt),
+        f"point {bore_outer_pt} inside back = {back_solid.is_inside(bore_outer_pt)} (expect False)",
     )
     check(
-        "ridge embeds past R_OUT for a genuine fused union with back's own wall",
-        RIDGE_INNER_X > -R_OUT,
-        f"RIDGE_INNER_X={RIDGE_INNER_X} mm > -R_OUT={-R_OUT} mm (embed depth {RIDGE_EMBED} mm)",
+        "back's clearance bore is open at mid-wall depth",
+        not back_solid.is_inside(bore_mid_pt),
+        f"point {bore_mid_pt} inside back = {back_solid.is_inside(bore_mid_pt)} (expect False)",
     )
-
-    # Tongue (front): solid material in both the thin arm (over the ridge)
-    # and the wider root (embedded into front's own wall), and its own
-    # pilot hole reads empty at its center.
-    tongue_arm_pt = ((TONGUE_OUTER_X + TONGUE_INNER_X) / 2.0, -(RIDGE_Y_DEPTH - 1.0), LATCH_HOLE_Z)
     check(
-        "tongue's arm is solid material on front (over the ridge, away from the hole)",
-        front_solid.is_inside(tongue_arm_pt),
-        f"point {tongue_arm_pt} inside front = {front_solid.is_inside(tongue_arm_pt)} (expect True)",
+        "back's wall remains solid just off to the side of the bore",
+        back_solid.is_inside(bore_side_pt),
+        f"point {bore_side_pt} inside back = {back_solid.is_inside(bore_side_pt)} (expect True)",
     )
-    tongue_root_pt = (RIDGE_INNER_X - 0.5, TONGUE_Y_MAX - 1.0, LATCH_HOLE_Z)
     check(
-        "tongue's root is solid material on front (embedded past R_OUT)",
-        front_solid.is_inside(tongue_root_pt),
-        f"point {tongue_root_pt} inside front = {front_solid.is_inside(tongue_root_pt)} (expect True)",
+        "back's bore diameter is oversized against the screw's smooth tip (pure clearance, never fastens)",
+        SCREW_TIP_D < BACK_BORE_D,
+        f"SCREW_TIP_D={SCREW_TIP_D} mm < BACK_BORE_D={BACK_BORE_D} mm",
     )
-    tongue_hole_pt = ((TONGUE_OUTER_X + TONGUE_INNER_X) / 2.0, LATCH_HOLE_Y, LATCH_HOLE_Z)
     check(
-        "tongue's pilot hole is a genuine void at its center",
-        not front_solid.is_inside(tongue_hole_pt),
-        f"point {tongue_hole_pt} inside front = {front_solid.is_inside(tongue_hole_pt)} (expect False)",
+        "screw's tip engagement stays within back's own wall thickness (doesn't poke into the cavity)",
+        SCREW_TIP_ENGAGE < WALL,
+        f"SCREW_TIP_ENGAGE={SCREW_TIP_ENGAGE} mm < WALL={WALL} mm",
+    )
+    check(
+        "back's bore start is oversized outboard of R_OUT (guarantees full wall penetration)",
+        BACK_BORE_X0 < -R_OUT,
+        f"BACK_BORE_X0={BACK_BORE_X0} mm < -R_OUT={-R_OUT} mm",
     )
 
-    # The screw's tip must be fully contained within the ridge's blind hole
-    # (not reaching its bottom, not falling short of it) -- the whole point
-    # of the mechanism: the ridge is a barrier the screw cannot pass.
+    # Tab (front): solid material in both the thin arm (reaching to rest
+    # against back's own wall) and the wider root (embedded into front's
+    # own wall), and its own fastening hole reads empty at its center.
+    tab_arm_pt = ((TAB_OUTER_X + TAB_INNER_X) / 2.0, -(TAB_Y_DEPTH - 1.0), LATCH_HOLE_Z)
     check(
-        "screw's smooth tip fits within the ridge's blind hole radius",
-        SCREW_TIP_D < RIDGE_HOLE_D,
-        f"SCREW_TIP_D={SCREW_TIP_D} mm < RIDGE_HOLE_D={RIDGE_HOLE_D} mm",
+        "tab's arm is solid material on front (away from the fastening hole)",
+        front_solid.is_inside(tab_arm_pt),
+        f"point {tab_arm_pt} inside front = {front_solid.is_inside(tab_arm_pt)} (expect True)",
     )
+    tab_root_pt = (TAB_ROOT_INNER_X - 0.5, TAB_EMBED - 1.0, LATCH_HOLE_Z)
     check(
-        "screw's tip doesn't bottom out in the ridge's hole",
-        SCREW_TIP_ENGAGE < RIDGE_HOLE_DEPTH,
-        f"SCREW_TIP_ENGAGE={SCREW_TIP_ENGAGE} mm < RIDGE_HOLE_DEPTH={RIDGE_HOLE_DEPTH} mm",
+        "tab's root is solid material on front (embedded past R_OUT)",
+        front_solid.is_inside(tab_root_pt),
+        f"point {tab_root_pt} inside front = {front_solid.is_inside(tab_root_pt)} (expect True)",
+    )
+    tab_hole_pt = ((TAB_OUTER_X + TAB_INNER_X) / 2.0, LATCH_HOLE_Y, LATCH_HOLE_Z)
+    check(
+        "tab's fastening hole is a genuine void at its center",
+        not front_solid.is_inside(tab_hole_pt),
+        f"point {tab_hole_pt} inside front = {front_solid.is_inside(tab_hole_pt)} (expect False)",
     )
 
-    # The screw's head must sit outside the tongue's own outer face --
+    # The screw's head must sit outside the tab's own outer face --
     # accessible from outside the assembly for tightening/loosening.
     screw_bb = screw_solid.bounding_box()
     check(
-        "screw's head is accessible beyond the tongue's outer face",
-        screw_bb.min.X < TONGUE_OUTER_X,
-        f"screw min X={screw_bb.min.X:.3f} mm < TONGUE_OUTER_X={TONGUE_OUTER_X} mm "
-        f"(head sticks out by {TONGUE_OUTER_X - screw_bb.min.X:.3f} mm)",
+        "screw's head is accessible beyond the tab's outer face",
+        screw_bb.min.X < TAB_OUTER_X,
+        f"screw min X={screw_bb.min.X:.3f} mm < TAB_OUTER_X={TAB_OUTER_X} mm "
+        f"(head sticks out by {TAB_OUTER_X - screw_bb.min.X:.3f} mm)",
     )
     check(
-        "the gap between the tongue's inner face and the ridge's outer tip matches LATCH_GAP",
-        abs((RIDGE_OUTER_X - TONGUE_INNER_X) - LATCH_GAP) < 1e-9,
-        f"RIDGE_OUTER_X-TONGUE_INNER_X={RIDGE_OUTER_X - TONGUE_INNER_X} mm, LATCH_GAP={LATCH_GAP} mm",
+        "the gap between the tab's inner face and back's own outer wall matches LATCH_GAP",
+        abs((-R_OUT - TAB_INNER_X) - LATCH_GAP) < 1e-9,
+        f"-R_OUT-TAB_INNER_X={-R_OUT - TAB_INNER_X} mm, LATCH_GAP={LATCH_GAP} mm",
+    )
+
+    # Cross-check dispenser_assembly.py's own placement formula against the
+    # REAL assembled screw solid's bounding box: the tip's engagement depth
+    # is measured from back's actual outer wall surface (-R_OUT), not from
+    # BACK_BORE_X0's own 1mm cutting-overshoot margin -- using the latter
+    # by mistake would shift the whole screw (and its thread) outboard by
+    # that same 1mm, silently misaligning the thread from the tab despite
+    # every build step succeeding.
+    expected_tip_end_x = -R_OUT + SCREW_TIP_ENGAGE
+    expected_head_far_x = expected_tip_end_x - SCREW_LENGTH
+    check(
+        "screw's actual placement matches the tip-engagement-from-R_OUT formula",
+        abs(screw_bb.min.X - expected_head_far_x) < 1e-6,
+        f"screw min X={screw_bb.min.X:.6f} mm, expected {expected_head_far_x:.6f} mm "
+        f"(= -R_OUT + SCREW_TIP_ENGAGE - SCREW_LENGTH)",
     )
 
     # Closest approach between back and front at the hinge (should be ~0, they touch)

@@ -7,8 +7,7 @@ from lib.canister import (
     half_shell,
     hinge_envelope_cut,
     hinge_knuckles,
-    latch_ridge,
-    latch_ridge_hole,
+    latch_back_bore,
     mount_features,
     reinforce_hinge,
 )
@@ -22,7 +21,7 @@ def canister_back():
     body = reinforce_hinge(body, front=False, segments=BACK_KNUCKLE_SEGMENTS)
     body = body - hinge_envelope_cut(own_segments=BACK_KNUCKLE_SEGMENTS)
 
-    body = body + latch_ridge() - latch_ridge_hole()
+    body = body - latch_back_bore()
 
     mount_add, mount_cut = mount_features()
     body = body + mount_add - mount_cut
