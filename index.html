@@ -1,0 +1,655 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>3D Print Designs</title>
+<style>
+  :root {
+    --bg: #edf0f4;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #1b2330;
+    --ink-dim: #5c6676;
+    --accent: #d96323;
+    --accent-ink: #ffffff;
+    --line: #cfd6e0;
+    --ok: #2f8f5b;
+    --canvas-bg: #e4e9ef;
+    --grid-major: #b9c2cf;
+    --grid-minor: #d4dae2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11151c;
+      --surface: #1a212b;
+      --surface-2: #212a36;
+      --ink: #e9edf3;
+      --ink-dim: #96a1b2;
+      --accent: #ff8a4c;
+      --accent-ink: #1b1206;
+      --line: #2b3342;
+      --ok: #52b884;
+      --canvas-bg: #0c1016;
+      --grid-major: #2c3644;
+      --grid-minor: #1c232d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11151c;
+    --surface: #1a212b;
+    --surface-2: #212a36;
+    --ink: #e9edf3;
+    --ink-dim: #96a1b2;
+    --accent: #ff8a4c;
+    --accent-ink: #1b1206;
+    --line: #2b3342;
+    --ok: #52b884;
+    --canvas-bg: #0c1016;
+    --grid-major: #2c3644;
+    --grid-minor: #1c232d;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    padding-inline: 16px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 1180px;
+    padding-block: 20px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  header.top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 18px;
+  }
+
+  h1 {
+    font-family: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    font-size: clamp(28px, 5vw, 40px);
+    letter-spacing: 0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .kicker {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .sub {
+    color: var(--ink-dim);
+    font-size: 14px;
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  .projects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .project-tab {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .project-tab[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 270px 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .parts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (max-width: 760px) {
+    .parts {
+      flex-direction: row;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .part-card { min-width: 200px; }
+  }
+
+  .part-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .part-card[data-active="true"] {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .part-card[data-active="true"] .name { color: var(--accent); }
+
+  .part-btn {
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: inherit;
+    font-family: inherit;
+  }
+  .part-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .part-card .name {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.01em;
+  }
+  .part-card .role {
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    line-height: 1.35;
+  }
+  .part-card .spec {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--ink-dim);
+    margin-top: 2px;
+  }
+
+  .dl-link {
+    align-self: flex-start;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    color: var(--accent);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 4px 9px;
+    margin-top: 2px;
+  }
+  .dl-link:hover { border-color: var(--accent); }
+
+  .viewer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .stage {
+    position: relative;
+    background: var(--canvas-bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+  }
+  @media (max-width: 520px) {
+    .stage { aspect-ratio: 1 / 1; }
+  }
+
+  .stage canvas { display: block; width: 100%; height: 100%; }
+
+  .toolbar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+  }
+  .tool-btn {
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    padding: 6px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+  .tool-btn[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  a.tool-btn { text-decoration: none; display: inline-block; }
+
+  .hud {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 10px 12px;
+    max-width: 78%;
+  }
+  .hud .title {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .hud .dims {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--ink-dim);
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--ink-dim);
+    text-align: right;
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  footer .ok { color: var(--ok); font-family: "IBM Plex Mono", monospace; }
+
+  .load-error {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="kicker">3D print designs</div>
+      <h1 id="pageTitle">Part Viewer</h1>
+    </div>
+  </header>
+  <p class="sub" id="pageSub">Browse and download STL files for every part, straight from this repo -- no build step needed.</p>
+
+  <nav class="projects" id="projectTabs" aria-label="Projects" hidden></nav>
+
+  <div class="layout">
+    <nav class="parts" id="partList" aria-label="Parts"></nav>
+
+    <div class="viewer-col">
+      <div class="stage" id="stage">
+        <div class="toolbar">
+          <button class="tool-btn" id="btnWire" aria-pressed="false">WIREFRAME</button>
+          <button class="tool-btn" id="btnSpin" aria-pressed="false">SPIN</button>
+          <button class="tool-btn" id="btnReset">RESET</button>
+          <a class="tool-btn" id="btnDownload" download>DOWNLOAD STL</a>
+        </div>
+        <div class="hud">
+          <div class="title" id="hudTitle">&nbsp;</div>
+          <div class="dims" id="hudDims">&nbsp;</div>
+        </div>
+      </div>
+      <div class="hint">Left-drag orbit · scroll zoom · right-drag pan · click a part card or "download" to save its .stl</div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="footerNote">Modeled in build123d/cadgen.</span>
+    <span class="ok">✓ zero interference, all parts checked</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<!--
+  STL_DATA is a plain JS object (path -> base64 STL bytes), generated by
+  scripts/build_viewer_bundle.py. Loaded as a <script src>, not fetched:
+  fetch()/XHR of a local file is blocked by the browser under file://
+  (no CORS for that scheme), but a <script src> load isn't, so this is
+  what lets the 3D preview work with this page opened directly from disk.
+  The real .stl files alongside it are what the "download" links point
+  to -- and what "git clone, then open a file" actually gets you.
+-->
+<script src="src/stl/viewer_data.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  // One entry per project in this repo. Add a new project here (and add
+  // its STL stems to scripts/build_viewer_bundle.py) as the repo grows.
+  var PROJECTS = [
+    {
+      id: "dog-bag-dispenser",
+      name: "Capsule Bag Dispenser",
+      kicker: "FDM print set · 2-piece clamshell",
+      summary: "Wall-mounted dog waste bag dispenser: a hinged capsule that closes with a single threaded screw, sized for a Ø40 × 70mm roll. Drag to orbit, scroll to zoom.",
+      footerNote: "Modeled in build123d/cadgen · PETG recommended for the front (hinge + latch) half, PLA fine for the back and pin.",
+      parts: [
+        {
+          id: "assembly",
+          name: "Closed assembly",
+          role: "All four parts in their latched, wall-mounted position.",
+          spec: "Ø50 × 124mm overall",
+          color: 0xb9c2cf,
+          stl: "src/stl/dispenser_assembly.stl",
+          dims: ["OD 50mm (25mm radius hollow domes)", "Overall length 124mm", "Cavity Ø44 × 74mm long"]
+        },
+        {
+          id: "back",
+          name: "Canister back",
+          role: "Wall-mount half. Two screw holes at the apex, counterbored inside.",
+          spec: "2× M4.5 mount holes",
+          color: 0x7f97b8,
+          stl: "src/stl/canister_back.stl",
+          dims: ["Cavity ID 44mm · wall 3mm", "Mount holes Ø4.5, ~29mm apart", "3 full-round hinge knuckles, pivot offset from the parting edge by the pin radius", "Plain clearance bore through the wall at the closing edge -- the closing screw's smooth tip rests here, unfastened"]
+        },
+        {
+          id: "front",
+          name: "Canister front",
+          role: "Hinges open on a pivot offset from the parting edge, latches shut with a single threaded screw. Dispensing slit for pulling bags.",
+          spec: "12 × 40mm slit",
+          color: 0xd98a5a,
+          stl: "src/stl/canister_front.stl",
+          dims: ["3 full-round hinge knuckles, filleted into the OD on their near side", "Slit 12mm wide × 40mm long", "Tab resting against back's own wall, with a threaded screw fastening hole"]
+        },
+        {
+          id: "pin",
+          name: "Hinge pin",
+          role: "3mm rod through the interleaved knuckle row, on a pivot offset from the parting edge by the pin bore radius.",
+          spec: "Ø3 × 57.25mm",
+          color: 0xc2c8d1,
+          stl: "src/stl/hinge_pin.stl",
+          dims: ["Diameter 3.0mm", "Length 57.25mm", "Slides in after assembly -- bore opens to free air past both ends of the knuckle row"]
+        },
+        {
+          id: "screw",
+          name: "Closing screw",
+          role: "The whole latch: self-taps into the tab's threaded screw fastening hole (rigid with front), while its smooth tip rests with clearance inside a plain bore through back's own wall -- not fastened there at all. Front's latch edge opens by rotating about the far hinge, so its motion here is mostly tangential, not a straight pull; the bore's own side wall blocks that tangential slide, acting like a dowel pin spanning the joint.",
+          spec: "Ø5 coarse thread",
+          color: 0x8fae7a,
+          stl: "src/stl/closing_screw.stl",
+          dims: ["Real printable helical thread, 2mm pitch", "Smooth tip seats with clearance in back's plain wall bore", "Self-tapping into the tab's slightly undersized screw fastening hole"]
+        }
+      ]
+    }
+  ];
+
+  var stage = document.getElementById("stage");
+  var partListEl = document.getElementById("partList");
+  var projectTabsEl = document.getElementById("projectTabs");
+  var hudTitle = document.getElementById("hudTitle");
+  var hudDims = document.getElementById("hudDims");
+  var btnWire = document.getElementById("btnWire");
+  var btnSpin = document.getElementById("btnSpin");
+  var btnReset = document.getElementById("btnReset");
+  var btnDownload = document.getElementById("btnDownload");
+  var pageTitle = document.getElementById("pageTitle");
+  var pageSub = document.getElementById("pageSub");
+  var footerNote = document.getElementById("footerNote");
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(38, 4 / 3, 0.1, 5000);
+  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  stage.insertBefore(renderer.domElement, stage.firstChild);
+
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 1;
+  controls.maxDistance = 5000;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x404850, 1.15));
+  var key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(1, 1.6, 1.2);
+  scene.add(key);
+  var rim = new THREE.DirectionalLight(0xffffff, 0.35);
+  rim.position.set(-1.2, 0.6, -1);
+  scene.add(rim);
+
+  function isDarkTheme() {
+    var root = document.documentElement;
+    if (root.getAttribute("data-theme") === "dark") return true;
+    if (root.getAttribute("data-theme") === "light") return false;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  var grid = null;
+  function buildGrid(radius) {
+    if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+    var dark = isDarkTheme();
+    var size = Math.max(radius * 4, 20);
+    var divisions = 20;
+    grid = new THREE.GridHelper(
+      size, divisions,
+      dark ? 0x2c3644 : 0xb9c2cf,
+      dark ? 0x1c232d : 0xd4dae2
+    );
+    grid.position.y = -radius * 1.02;
+    scene.add(grid);
+  }
+
+  var loader = new THREE.STLLoader();
+  var cache = {};
+  var current = null;
+  var spinning = false;
+  var wireframe = false;
+  var currentRadius = 50;
+  var activeProject = PROJECTS[0];
+
+  function base64ToArrayBuffer(b64) {
+    var binary = atob(b64);
+    var len = binary.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  function frameObject(mesh) {
+    mesh.geometry.computeBoundingSphere();
+    var s = mesh.geometry.boundingSphere;
+    var radius = Math.max(s.radius, 0.5);
+    currentRadius = radius;
+    var dist = radius / Math.sin(THREE.MathUtils.degToRad(38 / 2)) * 1.28;
+    camera.near = radius / 100;
+    camera.far = dist * 20;
+    camera.updateProjectionMatrix();
+    camera.position.set(dist * 0.62, dist * 0.5, dist * 0.62);
+    controls.target.set(0, 0, 0);
+    controls.minDistance = radius * 0.05;
+    controls.maxDistance = dist * 8;
+    controls.update();
+    buildGrid(radius);
+  }
+
+  function showPart(part) {
+    if (current) { scene.remove(current); }
+    hudTitle.textContent = part.name;
+    hudDims.innerHTML = part.dims.join("<br>");
+    btnDownload.href = part.stl;
+    btnDownload.download = part.stl.split("/").pop();
+
+    Array.prototype.forEach.call(partListEl.children, function (card) {
+      card.setAttribute("data-active", String(card.dataset.id === part.id));
+    });
+
+    function place(geometry) {
+      geometry.computeVertexNormals();
+      geometry.center();
+      var mat = new THREE.MeshStandardMaterial({
+        color: part.color,
+        roughness: 0.55,
+        metalness: 0.05,
+        wireframe: wireframe
+      });
+      var mesh = new THREE.Mesh(geometry, mat);
+      mesh.rotation.x = -Math.PI / 2; // Z-up model -> Y-up scene
+      current = mesh;
+      scene.add(mesh);
+      frameObject(mesh);
+    }
+
+    if (cache[part.id]) {
+      place(cache[part.id].clone());
+      return;
+    }
+    var b64 = window.STL_DATA && window.STL_DATA[part.stl];
+    if (!b64) {
+      hudTitle.textContent = part.name + " (mesh not built)";
+      hudDims.innerHTML = "Run <code>python scripts/build_viewer_bundle.py</code> to generate src/stl/viewer_data.js.";
+      return;
+    }
+    var buffer = base64ToArrayBuffer(b64);
+    var geometry = loader.parse(buffer);
+    cache[part.id] = geometry;
+    place(geometry.clone());
+  }
+
+  function renderProject(project) {
+    pageTitle.textContent = project.name;
+    pageSub.textContent = project.summary;
+    footerNote.textContent = project.footerNote || "";
+
+    if (PROJECTS.length > 1) {
+      projectTabsEl.hidden = false;
+      projectTabsEl.innerHTML = "";
+      PROJECTS.forEach(function (p) {
+        var tab = document.createElement("button");
+        tab.className = "project-tab";
+        tab.type = "button";
+        tab.textContent = p.name;
+        tab.setAttribute("aria-pressed", String(p.id === project.id));
+        tab.addEventListener("click", function () {
+          activeProject = p;
+          renderProject(p);
+        });
+        projectTabsEl.appendChild(tab);
+      });
+    }
+
+    partListEl.innerHTML = "";
+    project.parts.forEach(function (part) {
+      var card = document.createElement("div");
+      card.className = "part-card";
+      card.dataset.id = part.id;
+
+      var btn = document.createElement("button");
+      btn.className = "part-btn";
+      btn.type = "button";
+      btn.innerHTML =
+        '<span class="name">' + part.name + '</span>' +
+        '<span class="role">' + part.role + '</span>' +
+        '<span class="spec">' + part.spec + '</span>';
+      btn.addEventListener("click", function () { showPart(part); });
+      card.appendChild(btn);
+
+      var dl = document.createElement("a");
+      dl.className = "dl-link";
+      dl.href = part.stl;
+      dl.download = part.stl.split("/").pop();
+      dl.textContent = "Download .stl";
+      card.appendChild(dl);
+
+      partListEl.appendChild(card);
+    });
+
+    showPart(project.parts[0]);
+  }
+
+  btnWire.addEventListener("click", function () {
+    wireframe = !wireframe;
+    btnWire.setAttribute("aria-pressed", String(wireframe));
+    if (current) { current.material.wireframe = wireframe; }
+  });
+
+  btnSpin.addEventListener("click", function () {
+    spinning = !spinning;
+    btnSpin.setAttribute("aria-pressed", String(spinning));
+  });
+
+  btnReset.addEventListener("click", function () {
+    if (current) { frameObject(current); }
+  });
+
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+  new ResizeObserver(resize).observe(stage);
+  resize();
+
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+      if (currentRadius) buildGrid(currentRadius);
+    });
+  }
+
+  (function animate() {
+    requestAnimationFrame(animate);
+    if (spinning && current) current.rotation.z += 0.006;
+    controls.update();
+    renderer.render(scene, camera);
+  })();
+
+  if (!window.STL_DATA) {
+    var err = document.createElement("div");
+    err.className = "load-error";
+    err.textContent = "src/stl/viewer_data.js didn't load (mesh preview needs it) -- " +
+      "download links below still work directly against the .stl files. " +
+      "Run: python scripts/build_viewer_bundle.py";
+    partListEl.parentElement.insertBefore(err, partListEl.parentElement.firstChild);
+  }
+
+  renderProject(activeProject);
+})();
+</script>
+
+</body></html>

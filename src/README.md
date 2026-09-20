@@ -28,11 +28,20 @@ sealing, and interference across all four parts — all pass with zero
 overlap volume, except the screw's deliberate self-tapping engagement with
 the tab, checked separately for being genuine but not excessive).
 
-Preview: an interactive STL viewer (three.js) is published as a Claude
-Artifact — see the conversation for the link. Chromium snapshot rendering
-in this sandbox needs `python3 scripts/snapshot_shim.py step snapshot ...`
-(env-specific `executable_path` + `CADGEN_DAEMON=0` workaround) rather than
-plain `cadgen step snapshot`.
+Preview: `/index.html` at the repo root is an interactive STL viewer
+(three.js) checked into git -- clone the repo and open it directly in a
+browser, no server or build step needed, to view and download each part's
+`.stl`. It reads its mesh data from `src/stl/viewer_data.js` (a generated
+`<script src>`-loaded JS payload, not a `fetch()`, since local `fetch()`
+of a file is blocked under `file://`); the download links point straight
+at the real files alongside it in `src/stl/`. Regenerate both after any
+geometry change with `python scripts/build_viewer_bundle.py` (rebuilds
+this project's models, re-exports `src/stl/*.stl`, and rewrites
+`viewer_data.js`) -- `index.html`'s own part list is edited by hand in its
+`PROJECTS` array. Chromium snapshot rendering in this sandbox needs
+`python3 scripts/snapshot_shim.py step snapshot ...` (env-specific
+`executable_path` + `CADGEN_DAEMON=0` workaround) rather than plain
+`cadgen step snapshot`.
 
 ## Key dimensions
 - Sized for a roll Ø40mm x 70mm long, plus 4mm clearance on each: cavity
