@@ -82,22 +82,82 @@ MOUNT_BOSS_HEIGHT = 3.0
 _mount_usable = LENGTH - 2.0 * END_MARGIN
 MOUNT_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
 
-# Latch (edge at X=-R_OUT): a hook on the front catches through a window in
-# the back. Front's arm flexes in Y (its thin dimension); back's window is
-# a plain cut, not a separate flexing feature -- a single flex point is the
-# most durable arrangement for a hook that self-engages during the closing
-# swing (see latch_hooks() for why a fully rigid catch can't self-release
-# from pure rotation about a fixed pivot).
-LATCH_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
-HOOK_WIDTH = 12.0
-HOOK_ARM_THK = 2.5  # was TAB_THK=1.8 on the old cantilever -- thicker, sturdier arm
-HOOK_REACH = 6.0  # protrusion past the OD edge
-HOOK_CATCH_LEN = 4.0  # catch's inward hook length past the arm's own tip
-HOOK_CATCH_DROP = 3.5  # catch drops this far past the arm's bottom face -- asymmetric, one-sided
-HOOK_EMBED = 2.0  # extends the arm's base into the wall so it truly fuses, not just touches at an edge
-WINDOW_Z_MARGIN = 0.5  # window is 1mm wider than the hook
-WINDOW_Y_HIGH = HOOK_ARM_THK / 2.0 + 0.5  # clearance -- the arm just passes through here
-WINDOW_Y_LOW = -(HOOK_ARM_THK / 2.0 + HOOK_CATCH_DROP) + 0.3  # slight interference for snap retention
+# Lever latch (edge at X=-R_OUT): a fully rigid pivoting lever, printed as
+# its own small part, pinned to the back via a mini version of the hinge's
+# own knuckle construction (knuckle_row/knuckle_envelope_cut/reinforce_seam,
+# reused directly). It swings to hook over a static lip on the front --
+# a positive mechanical block, replacing the old cantilever hook, which had
+# to rely on a flex point to self-release (see the git history for that
+# reasoning): a rigid lever needs no flex anywhere, since it's a second,
+# independently-actuated degree of freedom rather than a snap that has to
+# both engage AND release from the same swing motion.
+LATCH_PIN_D = 2.5
+LATCH_PIN_R = LATCH_PIN_D / 2.0 + 0.1
+LATCH_KNUCKLE_R = 3.5
+LATCH_KNUCKLE_W = 6.0
+LATCH_KNUCKLE_GAP = 1.2
+LATCH_FILLET_R = 1.2
+
+# Generic knuckle placement (edge + normal * pin radius), same formula as
+# the hinge: here the edge is the tube's OTHER parting line (X=-R_OUT), and
+# the normal points outward (-X) at that edge.
+LATCH_EDGE_X = -R_OUT
+LATCH_EDGE_Y = 0.0
+LATCH_NORMAL_X = -1.0
+LATCH_NORMAL_Y = 0.0
+LATCH_AXIS_X = LATCH_EDGE_X + LATCH_NORMAL_X * LATCH_PIN_R
+LATCH_AXIS_Y = LATCH_EDGE_Y + LATCH_NORMAL_Y * LATCH_PIN_R
+
+# Three knuckle segments (fixed, lever, fixed), centered on the tube's own
+# Z midpoint -- one lever latch is plenty for a dispenser this size.
+LATCH_Z_CENTER = LENGTH / 2.0
+_latch_span = 3.0 * LATCH_KNUCKLE_W + 2.0 * LATCH_KNUCKLE_GAP
+_latch_z0 = LATCH_Z_CENTER - _latch_span / 2.0
+LATCH_FIXED_SEGMENTS = [
+    (_latch_z0, _latch_z0 + LATCH_KNUCKLE_W),
+    (
+        _latch_z0 + 2.0 * (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP),
+        _latch_z0 + 2.0 * (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP) + LATCH_KNUCKLE_W,
+    ),
+]
+LATCH_LEVER_SEGMENTS = [
+    (
+        _latch_z0 + (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP),
+        _latch_z0 + (LATCH_KNUCKLE_W + LATCH_KNUCKLE_GAP) + LATCH_KNUCKLE_W,
+    ),
+]
+_LEVER_Z0, _LEVER_Z1 = LATCH_LEVER_SEGMENTS[0]
+
+LATCH_PIN_MARGIN = 1.0
+LATCH_PIN_BORE_Z0 = _latch_z0 - LATCH_PIN_MARGIN - 0.5
+LATCH_PIN_BORE_Z1 = _latch_z0 + _latch_span + LATCH_PIN_MARGIN + 0.5
+
+# Catch lip (on front) and hook (on the lever), in the lever's own local Y
+# (tangential, away from the split line) and X (radial) directions. Both
+# stay at Y >= LATCH_LIP_Y_MIN, safely beyond every knuckle's own +Y reach
+# (LATCH_KNUCKLE_R), so neither interacts with the pivot knuckles or their
+# clearance cut at all. The lip and the lever's connecting shaft share the
+# lever knuckle's own Z-width but occupy different lanes within it (the
+# shaft has to pass by the lip's own Z on its way from the pivot to the
+# hook); only the hook, at the tip, widens to cover both lanes and reach
+# over the lip.
+LATCH_LIP_Y_MIN = 4.0
+LATCH_LIP_Y_MAX = 7.0
+LATCH_LIP_REACH = 3.0  # protrudes this far beyond R_OUT
+LATCH_LIP_EMBED = 1.5  # extends inboard into the wall band, past its own curvature, for a genuine fused union
+LATCH_LIP_CLEARANCE = 0.4  # gap between the lip and the hook that closes over it
+LATCH_HOOK_Y_MAX = LATCH_LIP_Y_MAX + LATCH_LIP_CLEARANCE + 2.5
+
+LATCH_LIP_Z0 = _LEVER_Z0 + 3.0
+LATCH_LIP_Z1 = _LEVER_Z1 - 0.5
+LATCH_SHAFT_Z0 = _LEVER_Z0 + 0.5
+LATCH_SHAFT_Z1 = LATCH_LIP_Z0 - 0.5
+LATCH_HOOK_Z0 = LATCH_SHAFT_Z0 - 0.3
+LATCH_HOOK_Z1 = LATCH_LIP_Z1 + 0.3
+
+LATCH_SHAFT_X_OUTER = LATCH_AXIS_X - 2.0
+LATCH_SHAFT_X_INNER = -(R_OUT + 0.3)  # stays clear of front's plain wall
+LATCH_HOOK_X_OUTER = -(R_OUT + LATCH_LIP_REACH + LATCH_LIP_CLEARANCE)
 
 # Dispensing slit (front apex X=0, Y=+R_OUT)
 SLOT_LEN = 40.0
@@ -135,103 +195,94 @@ def _y_cylinder(radius: float, height: float, x: float, y0: float, z: float) -> 
 PIN_BORE_Z0 = HINGE_Z_MIN - PIN_MARGIN - 0.5
 PIN_BORE_Z1 = HINGE_Z_MAX + PIN_MARGIN + 0.5
 
-# Generic hinge placement: given an edge (a line the two bodies meet along)
-# and a hinge normal (perpendicular to the edge, bisecting the angle
-# between the two bodies' outer faces at that edge), the knuckle axis is
-# the edge translated along the normal by the pin bore radius. Here the
-# edge is the tube's own parting line at the OD (X=R_OUT, Y=0, running the
-# full length in Z) and the normal is the outward radial direction at that
-# point (the tube's own OD is smooth/tangent-continuous across the parting
-# line, so the two outer faces' bisector is just the radial direction).
-HINGE_EDGE_X = R_OUT
-HINGE_EDGE_Y = 0.0
-HINGE_NORMAL_X = 1.0
-HINGE_NORMAL_Y = 0.0
-HINGE_AXIS_X = HINGE_EDGE_X + HINGE_NORMAL_X * PIN_R
-HINGE_AXIS_Y = HINGE_EDGE_Y + HINGE_NORMAL_Y * PIN_R
-HINGE_FILLET_R = 1.5
+# ---------------------------------------------------------------------------
+# Generic knuckle-pivot construction, reusable for any rotating joint on a
+# split shell: a hinge, a latch's own pivoting lever, or anything similar in
+# another project. Given an edge (a line the two bodies meet along) and a
+# normal (perpendicular to the edge, bisecting the angle between the two
+# bodies' outer faces there), a pivot axis is placed by translating the edge
+# along the normal by the pin bore radius. Knuckle segments built at that
+# axis (full-round bosses pierced by a continuous pin bore, not clipped to
+# either body's half) get genuine volumetric overlap with whichever body's
+# wall they're unioned onto -- no tangent-only fusion tricks needed -- and
+# the near-side seam where a knuckle meets that wall can be found exactly
+# from the two circles' (knuckle radius at the axis, wall radius at the
+# body's own center) intersection, for reinforcement fillets.
+# ---------------------------------------------------------------------------
 
-# Where the knuckle's own KNUCKLE_R circle crosses the tube's own R_OUT
-# circle in cross-section -- this is the seam edge that hinge reinforcement
-# fillets on each leaf's own (near) side. Extruded along Z, each crossing
-# point becomes a straight vertical edge per knuckle segment.
-_HINGE_D = ((HINGE_AXIS_X - 0.0) ** 2 + (HINGE_AXIS_Y - 0.0) ** 2) ** 0.5
-_HINGE_IX = (R_OUT**2 - KNUCKLE_R**2 + _HINGE_D**2) / (2.0 * _HINGE_D)
-_HINGE_IY = (R_OUT**2 - _HINGE_IX**2) ** 0.5
 
-def _knuckle_segment(z0: float, z1: float) -> bd.Shape:
-    """One knuckle: a plain full-round boss (a slice of the hinge's bulk
-    cylinder) pierced by the continuous pin bore. Not clipped to either
-    leaf's half -- it's a real hinge barrel, round all the way around, like
-    a piano hinge's knuckle. Its axis sits inside the tube's own wall band
-    (KNUCKLE_R is bigger than the axis's offset past the OD), so it always
-    has genuine volumetric overlap with whichever leaf's wall it's unioned
-    onto -- no tangent-only tricks needed to fuse them.
-    """
-    boss = _z_cylinder(KNUCKLE_R, z1 - z0, HINGE_AXIS_X, HINGE_AXIS_Y, z0)
-    bore = _z_cylinder(PIN_R, PIN_BORE_Z1 - PIN_BORE_Z0, HINGE_AXIS_X, HINGE_AXIS_Y, PIN_BORE_Z0)
+def knuckle_segment(axis_x: float, axis_y: float, knuckle_r: float, pin_r: float,
+                     z0: float, z1: float, bore_z0: float, bore_z1: float) -> bd.Shape:
+    """One knuckle: a plain full-round boss pierced by a continuous pin
+    bore spanning [bore_z0, bore_z1] (wider than [z0, z1] so the bore stays
+    open past the ends of a whole interleaved knuckle row)."""
+    boss = _z_cylinder(knuckle_r, z1 - z0, axis_x, axis_y, z0)
+    bore = _z_cylinder(pin_r, bore_z1 - bore_z0, axis_x, axis_y, bore_z0)
     return boss - bore
 
 
-def hinge_knuckles(segments: list[tuple[float, float]]) -> bd.Shape:
-    """The hinge bulk cylinder, sliced into knuckles (one per segment,
-    already pushed apart by the segment packer's gaps) and pierced by the
-    pin bore. Segments alternate between the two leaves by construction
-    (BACK_KNUCKLE_SEGMENTS / FRONT_KNUCKLE_SEGMENTS), so calling this with
-    one leaf's own segment list gives that leaf's knuckle row.
-    """
+def knuckle_row(axis_x: float, axis_y: float, knuckle_r: float, pin_r: float,
+                 segments: list[tuple[float, float]], bore_z0: float, bore_z1: float) -> bd.Shape:
+    """A row of knuckles at the given axis, one per segment."""
     add = None
     for z0, z1 in segments:
-        piece = _knuckle_segment(z0, z1)
+        piece = knuckle_segment(axis_x, axis_y, knuckle_r, pin_r, z0, z1, bore_z0, bore_z1)
         add = piece if add is None else add + piece
     return add
 
 
-def hinge_envelope_cut(own_segments: list[tuple[float, float]]) -> bd.Shape:
-    """The hinge's full continuous footprint (a single cylinder at the
-    hinge axis, matching the knuckle boss's own radius exactly, spanning
-    the whole pin bore span with no segment gaps and no per-leg split)
-    MINUS this leaf's own segments.
+def knuckle_envelope_cut(axis_x: float, axis_y: float, knuckle_r: float,
+                          bore_z0: float, bore_z1: float,
+                          protect_segments: list[tuple[float, float]] = ()) -> bd.Shape:
+    """The knuckle row's full continuous footprint (one cylinder spanning
+    the whole bore span, matching the knuckle radius exactly, no segment
+    gaps) MINUS `protect_segments`.
 
-    Subtracting the whole continuous envelope -- not just the other leaf's
-    specific segments, the previous approach -- is what actually clears
-    the small gaps between segments: cutting only the other leaf's
-    footprint left those gaps as plain, un-notched wall sticking out right
-    next to the knuckle row, a visible leftover once the knuckles
-    themselves were cleanly filleted.
+    Subtract this from a body's plain wall to clear every knuckle
+    location that ISN'T this body's own -- the small gaps between segments
+    included, not just the other party's specific segments, which would
+    leave those gaps as plain, un-notched wall sticking out right next to
+    a cleanly filleted knuckle row.
 
-    This leaf's own segments are excluded from the cut (not cut-then-
-    exactly-refilled by hinge_knuckles(), which is equivalent in the final
-    shape but leaves OCCT nothing to fillet against at each segment's Z
-    ends -- the wall face reinforce_hinge() blends into would already be
-    cut away right at that boundary). So the actual sequence is: add this
-    leaf's own knuckles onto the still-intact wall, fillet them, THEN
-    subtract this (whole envelope minus this leaf's own segments) to clear
-    everywhere else -- same final geometry, but the fillet runs against
-    intact material.
+    `protect_segments` (this body's own, already-unioned-and-filleted
+    segments) are excluded from the cut: cutting them too and then
+    exactly refilling with knuckle_row() is equivalent in the final shape,
+    but leaves OCCT nothing to fillet against at each segment's own Z
+    ends. So the real sequence is: union this body's own knuckles onto the
+    intact wall, fillet them, THEN subtract this (whole envelope minus
+    this body's own segments) -- same final geometry, fillet runs against
+    intact material. A body with no segments of its own (nothing to
+    protect) just gets the plain full cut.
     """
-    full = _z_cylinder(KNUCKLE_R, PIN_BORE_Z1 - PIN_BORE_Z0, HINGE_AXIS_X, HINGE_AXIS_Y, PIN_BORE_Z0)
+    full = _z_cylinder(knuckle_r, bore_z1 - bore_z0, axis_x, axis_y, bore_z0)
+    if not protect_segments:
+        return full
     protect = None
-    for z0, z1 in own_segments:
-        piece = _z_cylinder(KNUCKLE_R, z1 - z0, HINGE_AXIS_X, HINGE_AXIS_Y, z0)
+    for z0, z1 in protect_segments:
+        piece = _z_cylinder(knuckle_r, z1 - z0, axis_x, axis_y, z0)
         protect = piece if protect is None else protect + piece
     return full - protect
 
 
-def reinforce_hinge(body: bd.Shape, front: bool, segments: list[tuple[float, float]]) -> bd.Shape:
-    """Hinge reinforcement: fillet the seam edge where each of THIS leaf's
-    own knuckle bosses meets the leaf's own outer wall face. Runs after the
-    knuckles are unioned on and the other leaf's clearance is cut, since a
-    fillet needs a real edge on the combined solid to work with -- there's
-    nothing to fillet between two separate, not-yet-unioned shapes.
+def _seam_intersection(axis_x: float, axis_y: float, knuckle_r: float,
+                        wall_r: float, sign: float) -> tuple[float, float]:
+    """Where a knuckle circle (radius knuckle_r, centered at (axis_x,
+    axis_y)) crosses a wall circle (radius wall_r, centered at the
+    origin). `sign` (+1/-1) selects one of the two crossing points, on
+    either side of the origin-to-axis line."""
+    d = (axis_x**2 + axis_y**2) ** 0.5
+    ux, uy = axis_x / d, axis_y / d
+    px, py = -uy, ux  # perpendicular to the origin-to-axis direction
+    along = (wall_r**2 - knuckle_r**2 + d**2) / (2.0 * d)
+    perp = (wall_r**2 - along**2) ** 0.5
+    return along * ux + sign * perp * px, along * uy + sign * perp * py
 
-    Only the near side (where the knuckle actually meets this leaf's own
-    wall) gets filleted; the far side has no wall of this leaf's own to
-    blend into (that's the other leaf's clearance pocket instead), so no
-    matching edge exists there to select in the first place.
-    """
-    own_iy = _HINGE_IY if front else -_HINGE_IY
-    tol = 0.05
+
+def _select_vertical_seam_edges(body: bd.Shape, x: float, y: float,
+                                 segments: list[tuple[float, float]], tol: float = 0.05) -> list:
+    """Straight vertical (Z-parallel) edges of `body` at (x, y), one per
+    segment's own Z span -- the seam a knuckle-to-wall reinforcement fillet
+    targets."""
     target = []
     for z0, z1 in segments:
         for e in body.edges():
@@ -242,14 +293,60 @@ def reinforce_hinge(body: bd.Shape, front: bool, segments: list[tuple[float, flo
             zs = sorted((v0.Z, v1.Z))
             if abs(zs[0] - z0) > tol or abs(zs[1] - z1) > tol:
                 continue
-            if abs(v0.X - _HINGE_IX) > tol or abs(v1.X - _HINGE_IX) > tol:
+            if abs(v0.X - x) > tol or abs(v1.X - x) > tol:
                 continue
-            if abs(v0.Y - own_iy) > tol or abs(v1.Y - own_iy) > tol:
+            if abs(v0.Y - y) > tol or abs(v1.Y - y) > tol:
                 continue
             target.append(e)
+    return target
+
+
+def reinforce_seam(body: bd.Shape, axis_x: float, axis_y: float, knuckle_r: float,
+                    wall_r: float, sign: float, segments: list[tuple[float, float]],
+                    fillet_r: float) -> bd.Shape:
+    """Fillet the seam where each of this body's own knuckle bosses (at
+    `segments`) meets the body's own outer wall face (radius wall_r,
+    centered at the origin) -- the near side only, found via the two
+    circles' intersection. Run after the knuckles are unioned on: a fillet
+    needs a real edge on the combined solid, not two separate shapes.
+    """
+    x, y = _seam_intersection(axis_x, axis_y, knuckle_r, wall_r, sign)
+    target = _select_vertical_seam_edges(body, x, y, segments)
     if not target:
-        raise ValueError("reinforce_hinge: no seam edges found to fillet")
-    return bd.fillet(target, HINGE_FILLET_R)
+        raise ValueError("reinforce_seam: no seam edges found to fillet")
+    return bd.fillet(target, fillet_r)
+
+
+# Hinge (edge at X=+R_OUT): the tube's own parting line at the OD, normal =
+# outward radial direction (the OD is smooth/tangent-continuous across the
+# parting line, so the two outer faces' bisector there is just radial).
+HINGE_EDGE_X = R_OUT
+HINGE_EDGE_Y = 0.0
+HINGE_NORMAL_X = 1.0
+HINGE_NORMAL_Y = 0.0
+HINGE_AXIS_X = HINGE_EDGE_X + HINGE_NORMAL_X * PIN_R
+HINGE_AXIS_Y = HINGE_EDGE_Y + HINGE_NORMAL_Y * PIN_R
+HINGE_FILLET_R = 1.5
+
+
+def hinge_knuckles(segments: list[tuple[float, float]]) -> bd.Shape:
+    """Segments alternate between the two leaves by construction
+    (BACK_KNUCKLE_SEGMENTS / FRONT_KNUCKLE_SEGMENTS), so calling this with
+    one leaf's own segment list gives that leaf's knuckle row."""
+    return knuckle_row(HINGE_AXIS_X, HINGE_AXIS_Y, KNUCKLE_R, PIN_R, segments, PIN_BORE_Z0, PIN_BORE_Z1)
+
+
+def hinge_envelope_cut(own_segments: list[tuple[float, float]]) -> bd.Shape:
+    return knuckle_envelope_cut(HINGE_AXIS_X, HINGE_AXIS_Y, KNUCKLE_R, PIN_BORE_Z0, PIN_BORE_Z1, own_segments)
+
+
+def reinforce_hinge(body: bd.Shape, front: bool, segments: list[tuple[float, float]]) -> bd.Shape:
+    """Only the near side (where the knuckle actually meets this leaf's
+    own wall) gets filleted; the far side has no wall of this leaf's own
+    to blend into (that's the other leaf's clearance pocket instead), so
+    no matching edge exists there to select in the first place."""
+    sign = 1.0 if front else -1.0
+    return reinforce_seam(body, HINGE_AXIS_X, HINGE_AXIS_Y, KNUCKLE_R, R_OUT, sign, segments, HINGE_FILLET_R)
 
 
 def mount_features() -> tuple[bd.Shape, bd.Shape]:
@@ -275,67 +372,77 @@ def mount_features() -> tuple[bd.Shape, bd.Shape]:
     return add, cut
 
 
-def _hook(z_center: float) -> bd.Shape:
-    """One hook: a cantilever arm (flexes in Y, its thin dimension) with an
-    asymmetric catch dropping further -Y at the tip. Box axes: X = radial
-    reach, Y = flex/catch direction, Z = axial width.
+def latch_pivot_fixed() -> bd.Shape:
+    """Back's fixed half of the latch pivot: full-round knuckle bosses
+    (LATCH_FIXED_SEGMENTS) pierced by the latch pin bore -- the same
+    knuckle_row() the hinge itself uses, just at the latch's own axis and
+    a smaller radius."""
+    return knuckle_row(LATCH_AXIS_X, LATCH_AXIS_Y, LATCH_KNUCKLE_R, LATCH_PIN_R,
+                        LATCH_FIXED_SEGMENTS, LATCH_PIN_BORE_Z0, LATCH_PIN_BORE_Z1)
 
-    A single rigid hook can't self-release from a fixed-pivot rotation:
-    trace the latch edge's own arc as the leaf swings and the same path is
-    retraced in reverse to open, so a catch that blocks it one way blocks
-    it both ways unless something flexes momentarily. Putting that flex in
-    one sturdy, short cantilever arm (not the old thin blade) is the
-    durable version of that same necessity -- a true zero-flex hook would
-    need a second degree of freedom (axial slide, a separate release
-    action) rather than pure swing-to-close.
+
+def latch_pivot_envelope_cut(protect_segments: list[tuple[float, float]] = ()) -> bd.Shape:
+    """Clears the latch pivot's full footprint from a body, minus
+    `protect_segments` (that body's own, already-fused knuckles, if any).
+    Back passes its own LATCH_FIXED_SEGMENTS to protect them; front owns
+    nothing at the pivot, so it passes nothing and gets the full cut."""
+    return knuckle_envelope_cut(LATCH_AXIS_X, LATCH_AXIS_Y, LATCH_KNUCKLE_R,
+                                 LATCH_PIN_BORE_Z0, LATCH_PIN_BORE_Z1, protect_segments)
+
+
+def reinforce_latch_pivot(body: bd.Shape) -> bd.Shape:
+    """Fillet the seam where back's fixed pivot knuckles meet back's own
+    outer wall face -- same technique as reinforce_hinge(). Back occupies
+    Y<=0, so sign=+1 here picks the negative-Y (back's own) crossing point,
+    same convention as reinforce_hinge(front=False)."""
+    return reinforce_seam(body, LATCH_AXIS_X, LATCH_AXIS_Y, LATCH_KNUCKLE_R, R_OUT, 1.0,
+                           LATCH_FIXED_SEGMENTS, LATCH_FILLET_R)
+
+
+def latch_lever_arm() -> bd.Shape:
+    """The lever's own hook and connecting shaft (its pivot knuckle comes
+    from knuckle_row() separately, in latch_lever.py). Both stay entirely
+    at Y >= LATCH_KNUCKLE_R -- clear of the pivot knuckles and their
+    envelope cut -- and at X beyond R_OUT, clear of front's plain wall.
+
+    The shaft runs from the knuckle to the hook down a Z lane that avoids
+    front's catch lip (latch_catch_lip()); the hook then widens in Z to
+    reach over the lip from the outside, blocking it (and so the whole
+    front leaf) from swinging open -- the same physical principle as the
+    old hook-and-window catch, just via a separate rigid, pivoting part
+    instead of an integral flexing one.
     """
-    x_outer = -R_OUT
-    blade_x_max = x_outer + HOOK_EMBED
-    arm = bd.Box(
-        HOOK_REACH + HOOK_EMBED, HOOK_ARM_THK, HOOK_WIDTH,
-        align=(bd.Align.MAX, bd.Align.CENTER, bd.Align.CENTER),
+    shaft = bd.Box(
+        LATCH_SHAFT_X_INNER - LATCH_SHAFT_X_OUTER, LATCH_HOOK_Y_MAX, LATCH_SHAFT_Z1 - LATCH_SHAFT_Z0,
+        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.MIN),
     )
-    arm = bd.Pos(blade_x_max, 0.0, z_center) * arm
+    shaft = bd.Pos(LATCH_SHAFT_X_OUTER, 0.0, LATCH_SHAFT_Z0) * shaft
 
-    catch_thk = HOOK_ARM_THK + HOOK_CATCH_DROP
-    catch = bd.Box(
-        HOOK_CATCH_LEN, catch_thk, HOOK_WIDTH,
-        align=(bd.Align.MAX, bd.Align.MAX, bd.Align.CENTER),
+    hook_y0 = LATCH_LIP_Y_MAX + LATCH_LIP_CLEARANCE
+    hook = bd.Box(
+        LATCH_SHAFT_X_INNER - LATCH_HOOK_X_OUTER, LATCH_HOOK_Y_MAX - hook_y0, LATCH_HOOK_Z1 - LATCH_HOOK_Z0,
+        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.MIN),
     )
-    catch = bd.Pos(x_outer - HOOK_REACH + HOOK_CATCH_LEN, HOOK_ARM_THK / 2.0, z_center) * catch
+    hook = bd.Pos(LATCH_HOOK_X_OUTER, hook_y0, LATCH_HOOK_Z0) * hook
 
-    return arm + catch
-
-
-def latch_hooks() -> bd.Shape:
-    """Front leaf: cantilever hooks at the latch edge."""
-    add = None
-    for z in LATCH_Z:
-        piece = _hook(z)
-        add = piece if add is None else add + piece
-    return add
+    return shaft + hook
 
 
-def latch_windows() -> bd.Shape:
-    """Back leaf: cut receiving windows at the latch edge for the front
-    hooks. Clears the FULL radial wall thickness (plus margin) at each
-    latch position, so no leftover back material can collide with the
-    front hook's embed depth regardless of exact hook geometry.
+def latch_catch_lip() -> bd.Shape:
+    """Front's static catch: a lip protruding LATCH_LIP_REACH beyond
+    R_OUT, embedded LATCH_LIP_EMBED inboard of R_OUT to guarantee a
+    genuine fused union with front's own curved wall (the wall's actual
+    surface bows inward across the lip's Y-span, so a flat-faced lip needs
+    real embed depth, not just nominal contact at Y=0). Sits entirely
+    beyond the pivot knuckles' own Y-reach -- see latch_lever_arm().
     """
-    x_min = -(R_OUT + 2.0)
-    x_max = -(R_IN - 2.0)
-    width_x = x_max - x_min
-    cut = None
-    for z in LATCH_Z:
-        window = bd.Box(
-            width_x,
-            WINDOW_Y_HIGH - WINDOW_Y_LOW,
-            HOOK_WIDTH + 2.0 * WINDOW_Z_MARGIN,
-            align=(bd.Align.MIN, bd.Align.MIN, bd.Align.CENTER),
-        )
-        window = bd.Pos(x_min, WINDOW_Y_LOW, z) * window
-        cut = window if cut is None else cut + window
-    return cut
+    x0 = -(R_OUT + LATCH_LIP_REACH)
+    x1 = -R_OUT + LATCH_LIP_EMBED
+    lip = bd.Box(
+        x1 - x0, LATCH_LIP_Y_MAX - LATCH_LIP_Y_MIN, LATCH_LIP_Z1 - LATCH_LIP_Z0,
+        align=(bd.Align.MIN, bd.Align.MIN, bd.Align.MIN),
+    )
+    return bd.Pos(x0, LATCH_LIP_Y_MIN, LATCH_LIP_Z0) * lip
 
 
 def dispense_slot() -> bd.Shape:
