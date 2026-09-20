@@ -13,7 +13,7 @@ from lib.canister import (
 )
 
 
-@step(out="../STEP/canister_back.step")
+@step(out="../../STEP/dog_bag_dispenser/canister_back.step")
 def canister_back():
     body = half_shell(front=False)
 

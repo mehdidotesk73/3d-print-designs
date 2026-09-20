@@ -1,6 +1,7 @@
-"""Geometry checks for the poop-bag dispenser (back, front, pin).
+"""Geometry checks for the dog_bag_dispenser project (back, front, pin,
+screw).
 
-Run from the project root: python checks/check_dispenser.py
+Run from the repo root: python checks/check_dispenser.py
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from cadgen.geometry import (
     topology_errors,
 )
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src" / "dog_bag_dispenser"))
 from closing_screw import SCREW_LENGTH  # noqa: E402
 from lib.canister import (  # noqa: E402
     BACK_BORE_D,
@@ -69,14 +70,16 @@ def check(label: str, ok: bool, detail: str) -> None:
 
 
 def main() -> None:
+    step_dir = ROOT / "STEP" / "dog_bag_dispenser"
+
     # Topology/dimension checks use the standalone parts (clean local frame).
-    back = read_step(ROOT / "STEP" / "canister_back.step")
-    front = read_step(ROOT / "STEP" / "canister_front.step")
+    back = read_step(step_dir / "canister_back.step")
+    front = read_step(step_dir / "canister_front.step")
 
     # Interference checks need the ACTUAL assembled placement, so pull all
     # three parts from the assembly's saved scene rather than re-deriving
     # (and risking mismatching) each part's placement transform here.
-    scene = read_scene(ROOT / "STEP" / "dispenser_assembly.step")
+    scene = read_scene(step_dir / "dispenser_assembly.step")
     placed_back = scene.resolve("#canister_back").shape()
     placed_front = scene.resolve("#canister_front").shape()
     placed_pin = scene.resolve("#hinge_pin").shape()

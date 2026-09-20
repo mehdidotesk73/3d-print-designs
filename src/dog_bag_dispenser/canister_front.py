@@ -14,7 +14,7 @@ from lib.canister import (
 )
 
 
-@step(out="../STEP/canister_front.step")
+@step(out="../../STEP/dog_bag_dispenser/canister_front.step")
 def canister_front():
     body = half_shell(front=True)
 

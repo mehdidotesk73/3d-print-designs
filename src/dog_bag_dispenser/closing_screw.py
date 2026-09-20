@@ -48,7 +48,7 @@ def _threaded_shank(z0: float, length: float) -> bd.Shape:
     return bd.Pos(0.0, 0.0, z0) * shank
 
 
-@step(out="../STEP/closing_screw.step")
+@step(out="../../STEP/dog_bag_dispenser/closing_screw.step")
 def closing_screw():
     tip = bd.Cylinder(SCREW_TIP_D / 2.0, TIP_LEN, align=(bd.Align.CENTER, bd.Align.CENTER, bd.Align.MIN))
 

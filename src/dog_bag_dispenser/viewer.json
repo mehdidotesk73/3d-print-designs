@@ -1,0 +1,75 @@
+{
+  "id": "dog_bag_dispenser",
+  "name": "Capsule Bag Dispenser",
+  "kicker": "FDM print set · 2-piece clamshell",
+  "summary": "Wall-mounted dog waste bag dispenser: a hinged capsule that closes with a single threaded screw, sized for a Ø40 × 70mm roll.",
+  "footerNote": "Modeled in build123d/cadgen · PETG recommended for the front (hinge + latch) half, PLA fine for the back and pin.",
+  "parts": [
+    {
+      "id": "assembly",
+      "name": "Closed assembly",
+      "description": "All four parts in their latched, wall-mounted position.",
+      "spec": "Ø50 × 124mm overall",
+      "color": "0xb9c2cf",
+      "stl": "dispenser_assembly.stl",
+      "details": [
+        "OD 50mm (25mm radius hollow domes)",
+        "Overall length 124mm",
+        "Cavity Ø44 × 74mm long"
+      ]
+    },
+    {
+      "id": "back",
+      "name": "Canister back",
+      "description": "Wall-mount half. Two screw holes at the apex, counterbored inside.",
+      "spec": "2× M4.5 mount holes",
+      "color": "0x7f97b8",
+      "stl": "canister_back.stl",
+      "details": [
+        "Cavity ID 44mm · wall 3mm",
+        "Mount holes Ø4.5, ~29mm apart",
+        "3 full-round hinge knuckles, pivot offset from the parting edge by the pin radius",
+        "Plain clearance bore through the wall at the closing edge -- the closing screw's smooth tip rests here, unfastened"
+      ]
+    },
+    {
+      "id": "front",
+      "name": "Canister front",
+      "description": "Hinges open on a pivot offset from the parting edge, latches shut with a single threaded screw. Dispensing slit for pulling bags.",
+      "spec": "12 × 40mm slit",
+      "color": "0xd98a5a",
+      "stl": "canister_front.stl",
+      "details": [
+        "3 full-round hinge knuckles, filleted into the OD on their near side",
+        "Slit 12mm wide × 40mm long",
+        "Tab resting against back's own wall, with a threaded screw fastening hole"
+      ]
+    },
+    {
+      "id": "pin",
+      "name": "Hinge pin",
+      "description": "3mm rod through the interleaved knuckle row, on a pivot offset from the parting edge by the pin bore radius.",
+      "spec": "Ø3 × 57.25mm",
+      "color": "0xc2c8d1",
+      "stl": "hinge_pin.stl",
+      "details": [
+        "Diameter 3.0mm",
+        "Length 57.25mm",
+        "Slides in after assembly -- bore opens to free air past both ends of the knuckle row"
+      ]
+    },
+    {
+      "id": "screw",
+      "name": "Closing screw",
+      "description": "The whole latch: self-taps into the tab's threaded screw fastening hole (rigid with front), while its smooth tip rests with clearance inside a plain bore through back's own wall -- not fastened there at all. Front's latch edge opens by rotating about the far hinge, so its motion here is mostly tangential, not a straight pull; the bore's own side wall blocks that tangential slide, acting like a dowel pin spanning the joint.",
+      "spec": "Ø5 coarse thread",
+      "color": "0x8fae7a",
+      "stl": "closing_screw.stl",
+      "details": [
+        "Real printable helical thread, 2mm pitch",
+        "Smooth tip seats with clearance in back's plain wall bore",
+        "Self-tapping into the tab's slightly undersized screw fastening hole"
+      ]
+    }
+  ]
+}

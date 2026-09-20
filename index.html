@@ -63,7 +63,7 @@
     padding-block: 20px 32px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
 
   header.top {
@@ -93,120 +93,81 @@
   .sub {
     color: var(--ink-dim);
     font-size: 14px;
-    max-width: 60ch;
+    max-width: 70ch;
     margin: 0;
   }
 
-  .projects {
+  /* Project tabs */
+  .tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
   }
-  .project-tab {
+  .tab-btn {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 6px 14px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 12px;
+    padding: 7px 16px;
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
     color: var(--ink);
     cursor: pointer;
   }
-  .project-tab[aria-pressed="true"] {
+  .tab-btn[aria-pressed="true"] {
     background: var(--accent);
     color: var(--accent-ink);
     border-color: var(--accent);
   }
 
-  .layout {
-    display: grid;
-    grid-template-columns: 270px 1fr;
-    gap: 16px;
-  }
-  @media (max-width: 760px) {
-    .layout { grid-template-columns: 1fr; }
-  }
-
-  .parts {
+  /* Part subtabs */
+  .subtabs {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 8px;
   }
-  @media (max-width: 760px) {
-    .parts {
-      flex-direction: row;
-      overflow-x: auto;
-      padding-bottom: 4px;
-    }
-    .part-card { min-width: 200px; }
-  }
-
-  .part-card {
+  .subtab-btn {
+    text-align: left;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    color: var(--ink);
-    font-family: inherit;
-  }
-  .part-card[data-active="true"] {
-    border-color: var(--accent);
-    box-shadow: inset 0 0 0 1px var(--accent);
-  }
-  .part-card[data-active="true"] .name { color: var(--accent); }
-
-  .part-btn {
-    text-align: left;
-    background: none;
-    border: none;
-    padding: 0;
+    border-bottom: 2px solid var(--line);
+    border-radius: 8px 8px 0 0;
+    padding: 8px 12px;
+    max-width: 220px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    color: inherit;
+    gap: 3px;
+    color: var(--ink);
     font-family: inherit;
   }
-  .part-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .part-card .name {
+  .subtab-btn[aria-pressed="true"] {
+    border-bottom-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .subtab-btn[aria-pressed="true"] .name { color: var(--accent); }
+  .subtab-btn .name {
     font-family: "Big Shoulders Display", sans-serif;
     font-weight: 600;
-    font-size: 19px;
+    font-size: 15px;
     letter-spacing: 0.01em;
   }
-  .part-card .role {
-    font-size: 12.5px;
-    color: var(--ink-dim);
-    line-height: 1.35;
-  }
-  .part-card .spec {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  .subtab-btn .desc {
     font-size: 11.5px;
     color: var(--ink-dim);
-    margin-top: 2px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
-
-  .dl-link {
-    align-self: flex-start;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11px;
-    letter-spacing: 0.03em;
-    text-decoration: none;
-    color: var(--accent);
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    padding: 4px 9px;
-    margin-top: 2px;
-  }
-  .dl-link:hover { border-color: var(--accent); }
 
   .viewer-col {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     min-width: 0;
   }
 
@@ -216,10 +177,10 @@
     border: 1px solid var(--line);
     border-radius: 12px;
     overflow: hidden;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 9;
   }
-  @media (max-width: 520px) {
-    .stage { aspect-ratio: 1 / 1; }
+  @media (max-width: 640px) {
+    .stage { aspect-ratio: 4 / 3; }
   }
 
   .stage canvas { display: block; width: 100%; height: 100%; }
@@ -248,34 +209,83 @@
     border-color: var(--accent);
   }
   a.tool-btn { text-decoration: none; display: inline-block; }
-
-  .hud {
-    position: absolute;
-    left: 10px;
-    bottom: 10px;
-    background: color-mix(in srgb, var(--surface) 90%, transparent);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    padding: 10px 12px;
-    max-width: 78%;
-  }
-  .hud .title {
-    font-family: "Big Shoulders Display", sans-serif;
-    font-weight: 600;
-    font-size: 16px;
-  }
-  .hud .dims {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11.5px;
-    color: var(--ink-dim);
-    margin-top: 2px;
-    line-height: 1.5;
+  a.tool-btn.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
   }
 
   .hint {
     font-size: 12px;
     color: var(--ink-dim);
     text-align: right;
+  }
+
+  /* Details panel -- sits BELOW the stage, not overlaying it */
+  .details {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .details .head-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 16px;
+  }
+  .details h2 {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    margin: 0;
+  }
+  .details .spec {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .details .desc {
+    color: var(--ink-dim);
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .details ul.dims {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .details ul.dims li {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink);
+    padding-left: 14px;
+    position: relative;
+  }
+  .details ul.dims li::before {
+    content: "\2022";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+  .details .dl-link {
+    align-self: flex-start;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-radius: 7px;
+    padding: 6px 12px;
   }
 
   footer {
@@ -307,32 +317,30 @@
   <header class="top">
     <div>
       <div class="kicker">3D print designs</div>
-      <h1 id="pageTitle">Part Viewer</h1>
+      <h1>Part Viewer</h1>
     </div>
   </header>
-  <p class="sub" id="pageSub">Browse and download STL files for every part, straight from this repo -- no build step needed.</p>
+  <p class="sub">Browse and download STL files for every part, straight from this repo -- no build step needed. Drag to orbit, scroll to zoom.</p>
 
-  <nav class="projects" id="projectTabs" aria-label="Projects" hidden></nav>
+  <div id="loadErrorSlot"></div>
 
-  <div class="layout">
-    <nav class="parts" id="partList" aria-label="Parts"></nav>
+  <nav class="tabs" id="projectTabs" aria-label="Projects"></nav>
+  <p class="sub" id="projectSummary"></p>
+  <nav class="subtabs" id="partTabs" aria-label="Parts"></nav>
 
-    <div class="viewer-col">
-      <div class="stage" id="stage">
-        <div class="toolbar">
-          <button class="tool-btn" id="btnWire" aria-pressed="false">WIREFRAME</button>
-          <button class="tool-btn" id="btnSpin" aria-pressed="false">SPIN</button>
-          <button class="tool-btn" id="btnReset">RESET</button>
-          <a class="tool-btn" id="btnDownload" download>DOWNLOAD STL</a>
-        </div>
-        <div class="hud">
-          <div class="title" id="hudTitle">&nbsp;</div>
-          <div class="dims" id="hudDims">&nbsp;</div>
-        </div>
+  <div class="viewer-col">
+    <div class="stage" id="stage">
+      <div class="toolbar">
+        <button class="tool-btn" id="btnWire" aria-pressed="false">WIREFRAME</button>
+        <button class="tool-btn" id="btnSpin" aria-pressed="false">SPIN</button>
+        <button class="tool-btn" id="btnReset">RESET</button>
+        <a class="tool-btn primary" id="btnDownload" download>DOWNLOAD STL</a>
       </div>
-      <div class="hint">Left-drag orbit · scroll zoom · right-drag pan · click a part card or "download" to save its .stl</div>
     </div>
+    <div class="hint">Left-drag orbit · scroll zoom · right-drag pan</div>
   </div>
+
+  <div class="details" id="details"></div>
 
   <footer>
     <span id="footerNote">Modeled in build123d/cadgen.</span>
@@ -345,94 +353,36 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <!--
-  STL_DATA is a plain JS object (path -> base64 STL bytes), generated by
-  scripts/build_viewer_bundle.py. Loaded as a <script src>, not fetched:
-  fetch()/XHR of a local file is blocked by the browser under file://
-  (no CORS for that scheme), but a <script src> load isn't, so this is
-  what lets the 3D preview work with this page opened directly from disk.
-  The real .stl files alongside it are what the "download" links point
-  to -- and what "git clone, then open a file" actually gets you.
+  viewer_data.js sets window.PROJECTS (every src/<project>/viewer.json,
+  discovered and combined) and window.STL_DATA (path -> base64 STL
+  bytes), generated by scripts/build_html.py. Loaded as a <script src>,
+  not fetched: fetch()/XHR of a local file is blocked by the browser
+  under file:// (no CORS for that scheme), but a <script src> load
+  isn't, so this is what lets the 3D preview work with this page opened
+  directly from disk. The real .stl files under each project's stl/ are
+  what the "download" links point to.
 -->
-<script src="src/stl/viewer_data.js"></script>
+<script src="viewer_data.js"></script>
 
 <script>
 (function () {
   "use strict";
 
-  // One entry per project in this repo. Add a new project here (and add
-  // its STL stems to scripts/build_viewer_bundle.py) as the repo grows.
-  var PROJECTS = [
-    {
-      id: "dog-bag-dispenser",
-      name: "Capsule Bag Dispenser",
-      kicker: "FDM print set · 2-piece clamshell",
-      summary: "Wall-mounted dog waste bag dispenser: a hinged capsule that closes with a single threaded screw, sized for a Ø40 × 70mm roll. Drag to orbit, scroll to zoom.",
-      footerNote: "Modeled in build123d/cadgen · PETG recommended for the front (hinge + latch) half, PLA fine for the back and pin.",
-      parts: [
-        {
-          id: "assembly",
-          name: "Closed assembly",
-          role: "All four parts in their latched, wall-mounted position.",
-          spec: "Ø50 × 124mm overall",
-          color: 0xb9c2cf,
-          stl: "src/stl/dispenser_assembly.stl",
-          dims: ["OD 50mm (25mm radius hollow domes)", "Overall length 124mm", "Cavity Ø44 × 74mm long"]
-        },
-        {
-          id: "back",
-          name: "Canister back",
-          role: "Wall-mount half. Two screw holes at the apex, counterbored inside.",
-          spec: "2× M4.5 mount holes",
-          color: 0x7f97b8,
-          stl: "src/stl/canister_back.stl",
-          dims: ["Cavity ID 44mm · wall 3mm", "Mount holes Ø4.5, ~29mm apart", "3 full-round hinge knuckles, pivot offset from the parting edge by the pin radius", "Plain clearance bore through the wall at the closing edge -- the closing screw's smooth tip rests here, unfastened"]
-        },
-        {
-          id: "front",
-          name: "Canister front",
-          role: "Hinges open on a pivot offset from the parting edge, latches shut with a single threaded screw. Dispensing slit for pulling bags.",
-          spec: "12 × 40mm slit",
-          color: 0xd98a5a,
-          stl: "src/stl/canister_front.stl",
-          dims: ["3 full-round hinge knuckles, filleted into the OD on their near side", "Slit 12mm wide × 40mm long", "Tab resting against back's own wall, with a threaded screw fastening hole"]
-        },
-        {
-          id: "pin",
-          name: "Hinge pin",
-          role: "3mm rod through the interleaved knuckle row, on a pivot offset from the parting edge by the pin bore radius.",
-          spec: "Ø3 × 57.25mm",
-          color: 0xc2c8d1,
-          stl: "src/stl/hinge_pin.stl",
-          dims: ["Diameter 3.0mm", "Length 57.25mm", "Slides in after assembly -- bore opens to free air past both ends of the knuckle row"]
-        },
-        {
-          id: "screw",
-          name: "Closing screw",
-          role: "The whole latch: self-taps into the tab's threaded screw fastening hole (rigid with front), while its smooth tip rests with clearance inside a plain bore through back's own wall -- not fastened there at all. Front's latch edge opens by rotating about the far hinge, so its motion here is mostly tangential, not a straight pull; the bore's own side wall blocks that tangential slide, acting like a dowel pin spanning the joint.",
-          spec: "Ø5 coarse thread",
-          color: 0x8fae7a,
-          stl: "src/stl/closing_screw.stl",
-          dims: ["Real printable helical thread, 2mm pitch", "Smooth tip seats with clearance in back's plain wall bore", "Self-tapping into the tab's slightly undersized screw fastening hole"]
-        }
-      ]
-    }
-  ];
+  var PROJECTS = window.PROJECTS || [];
 
-  var stage = document.getElementById("stage");
-  var partListEl = document.getElementById("partList");
   var projectTabsEl = document.getElementById("projectTabs");
-  var hudTitle = document.getElementById("hudTitle");
-  var hudDims = document.getElementById("hudDims");
+  var partTabsEl = document.getElementById("partTabs");
+  var projectSummaryEl = document.getElementById("projectSummary");
+  var detailsEl = document.getElementById("details");
+  var stage = document.getElementById("stage");
   var btnWire = document.getElementById("btnWire");
   var btnSpin = document.getElementById("btnSpin");
   var btnReset = document.getElementById("btnReset");
   var btnDownload = document.getElementById("btnDownload");
-  var pageTitle = document.getElementById("pageTitle");
-  var pageSub = document.getElementById("pageSub");
   var footerNote = document.getElementById("footerNote");
 
   var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera(38, 4 / 3, 0.1, 5000);
+  var camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.1, 5000);
   var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   stage.insertBefore(renderer.domElement, stage.firstChild);
@@ -506,22 +456,61 @@
     buildGrid(radius);
   }
 
+  function renderDetails(part) {
+    detailsEl.innerHTML = "";
+
+    var headRow = document.createElement("div");
+    headRow.className = "head-row";
+    var h2 = document.createElement("h2");
+    h2.textContent = part.name;
+    var spec = document.createElement("span");
+    spec.className = "spec";
+    spec.textContent = part.spec || "";
+    headRow.appendChild(h2);
+    headRow.appendChild(spec);
+    detailsEl.appendChild(headRow);
+
+    if (part.description) {
+      var desc = document.createElement("p");
+      desc.className = "desc";
+      desc.textContent = part.description;
+      detailsEl.appendChild(desc);
+    }
+
+    if (part.details && part.details.length) {
+      var ul = document.createElement("ul");
+      ul.className = "dims";
+      part.details.forEach(function (d) {
+        var li = document.createElement("li");
+        li.textContent = d;
+        ul.appendChild(li);
+      });
+      detailsEl.appendChild(ul);
+    }
+
+    var dl = document.createElement("a");
+    dl.className = "dl-link";
+    dl.href = part.stl;
+    dl.download = part.stl.split("/").pop();
+    dl.textContent = "Download " + part.stl.split("/").pop();
+    detailsEl.appendChild(dl);
+  }
+
   function showPart(part) {
     if (current) { scene.remove(current); }
-    hudTitle.textContent = part.name;
-    hudDims.innerHTML = part.dims.join("<br>");
     btnDownload.href = part.stl;
     btnDownload.download = part.stl.split("/").pop();
+    renderDetails(part);
 
-    Array.prototype.forEach.call(partListEl.children, function (card) {
-      card.setAttribute("data-active", String(card.dataset.id === part.id));
+    Array.prototype.forEach.call(partTabsEl.children, function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.id === part.id));
     });
 
     function place(geometry) {
       geometry.computeVertexNormals();
       geometry.center();
       var mat = new THREE.MeshStandardMaterial({
-        color: part.color,
+        color: Number(part.color),
         roughness: 0.55,
         metalness: 0.05,
         wireframe: wireframe
@@ -533,68 +522,51 @@
       frameObject(mesh);
     }
 
-    if (cache[part.id]) {
-      place(cache[part.id].clone());
+    if (cache[part.stl]) {
+      place(cache[part.stl].clone());
       return;
     }
     var b64 = window.STL_DATA && window.STL_DATA[part.stl];
     if (!b64) {
-      hudTitle.textContent = part.name + " (mesh not built)";
-      hudDims.innerHTML = "Run <code>python scripts/build_viewer_bundle.py</code> to generate src/stl/viewer_data.js.";
+      detailsEl.insertAdjacentHTML("beforeend",
+        '<p class="desc">Mesh not built -- run <code>python scripts/build_html.py</code> ' +
+        'after the project’s own build.py to generate viewer_data.js.</p>');
       return;
     }
     var buffer = base64ToArrayBuffer(b64);
     var geometry = loader.parse(buffer);
-    cache[part.id] = geometry;
+    cache[part.stl] = geometry;
     place(geometry.clone());
   }
 
   function renderProject(project) {
-    pageTitle.textContent = project.name;
-    pageSub.textContent = project.summary;
+    activeProject = project;
+    projectSummaryEl.textContent = project.summary || "";
     footerNote.textContent = project.footerNote || "";
 
-    if (PROJECTS.length > 1) {
-      projectTabsEl.hidden = false;
-      projectTabsEl.innerHTML = "";
-      PROJECTS.forEach(function (p) {
-        var tab = document.createElement("button");
-        tab.className = "project-tab";
-        tab.type = "button";
-        tab.textContent = p.name;
-        tab.setAttribute("aria-pressed", String(p.id === project.id));
-        tab.addEventListener("click", function () {
-          activeProject = p;
-          renderProject(p);
-        });
-        projectTabsEl.appendChild(tab);
-      });
-    }
+    projectTabsEl.innerHTML = "";
+    PROJECTS.forEach(function (p) {
+      var tab = document.createElement("button");
+      tab.className = "tab-btn";
+      tab.type = "button";
+      tab.textContent = p.name;
+      tab.setAttribute("aria-pressed", String(p.id === project.id));
+      tab.addEventListener("click", function () { renderProject(p); });
+      projectTabsEl.appendChild(tab);
+    });
 
-    partListEl.innerHTML = "";
+    partTabsEl.innerHTML = "";
     project.parts.forEach(function (part) {
-      var card = document.createElement("div");
-      card.className = "part-card";
-      card.dataset.id = part.id;
-
       var btn = document.createElement("button");
-      btn.className = "part-btn";
+      btn.className = "subtab-btn";
       btn.type = "button";
+      btn.dataset.id = part.id;
+      btn.setAttribute("aria-pressed", "false");
       btn.innerHTML =
         '<span class="name">' + part.name + '</span>' +
-        '<span class="role">' + part.role + '</span>' +
-        '<span class="spec">' + part.spec + '</span>';
+        '<span class="desc">' + part.description + '</span>';
       btn.addEventListener("click", function () { showPart(part); });
-      card.appendChild(btn);
-
-      var dl = document.createElement("a");
-      dl.className = "dl-link";
-      dl.href = part.stl;
-      dl.download = part.stl.split("/").pop();
-      dl.textContent = "Download .stl";
-      card.appendChild(dl);
-
-      partListEl.appendChild(card);
+      partTabsEl.appendChild(btn);
     });
 
     showPart(project.parts[0]);
@@ -639,16 +611,16 @@
     renderer.render(scene, camera);
   })();
 
-  if (!window.STL_DATA) {
+  if (!window.STL_DATA || !PROJECTS.length) {
     var err = document.createElement("div");
     err.className = "load-error";
-    err.textContent = "src/stl/viewer_data.js didn't load (mesh preview needs it) -- " +
-      "download links below still work directly against the .stl files. " +
-      "Run: python scripts/build_viewer_bundle.py";
-    partListEl.parentElement.insertBefore(err, partListEl.parentElement.firstChild);
+    err.textContent = PROJECTS.length
+      ? "viewer_data.js didn't load its mesh data -- download links still work directly against each project's .stl files. Run: python scripts/build_html.py"
+      : "No projects found. Run each project's own build.py, then python scripts/build_html.py from the repo root.";
+    document.getElementById("loadErrorSlot").appendChild(err);
   }
 
-  renderProject(activeProject);
+  if (PROJECTS.length) { renderProject(activeProject); }
 })();
 </script>
 

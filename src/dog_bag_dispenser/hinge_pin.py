@@ -9,7 +9,7 @@ from lib.canister import PIN_BORE_Z0, PIN_BORE_Z1, PIN_D
 PIN_LENGTH = PIN_BORE_Z1 - PIN_BORE_Z0
 
 
-@step(out="../STEP/hinge_pin.step")
+@step(out="../../STEP/dog_bag_dispenser/hinge_pin.step")
 def hinge_pin():
     body = bd.Cylinder(PIN_D / 2.0, PIN_LENGTH)
     body.label = "hinge_pin"

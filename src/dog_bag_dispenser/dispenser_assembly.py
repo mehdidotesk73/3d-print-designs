@@ -16,7 +16,7 @@ from lib.canister import (
 )
 
 
-@step(out="../STEP/dispenser_assembly.step")
+@step(out="../../STEP/dog_bag_dispenser/dispenser_assembly.step")
 def dispenser_assembly():
     back = canister_back()
     back.label = "canister_back"

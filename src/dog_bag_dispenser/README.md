@@ -13,32 +13,38 @@ The hinge is built from a generic knuckle-pivot module in `lib/canister.py`
 construction for any rotating joint on a split shell, given just an edge,
 a normal, and a pin radius. See **Hinge construction** below.
 
+This project lives at `src/dog_bag_dispenser/` -- one of possibly several
+projects in this repo, each with its own `lib/`, model scripts, and
+generated STL bundle. See `/index.html` and `scripts/build_html.py` at
+the repo root for how every project's parts get surfaced in one viewer.
+
 | Script | Output | Purpose |
 | --- | --- | --- |
 | lib/canister.py | (no output) | Shared geometry: shell, dome caps, generic knuckle-pivot module, mount bosses, latch tab/back-bore, dispensing slot |
-| canister_back.py | STEP/canister_back.step, STL/canister_back.stl | Wall-mount half: 2x screw holes + counterbore at the apex, hinge knuckles, latch's plain clearance bore |
-| canister_front.py | STEP/canister_front.step, STL/canister_front.stl | Hinged half with the dispensing slit and the latch's tab |
-| hinge_pin.py | STEP/hinge_pin.step, STL/hinge_pin.stl | 3mm rod spanning the interleaved hinge knuckles |
-| closing_screw.py | STEP/closing_screw.step, STL/closing_screw.stl | The latch itself: a threaded screw with a real, printable helical thread |
-| dispenser_assembly.py | STEP/dispenser_assembly.step | All four parts placed in their closed, assembled position |
+| canister_back.py | STEP/dog_bag_dispenser/canister_back.step | Wall-mount half: 2x screw holes + counterbore at the apex, hinge knuckles, latch's plain clearance bore |
+| canister_front.py | STEP/dog_bag_dispenser/canister_front.step | Hinged half with the dispensing slit and the latch's tab |
+| hinge_pin.py | STEP/dog_bag_dispenser/hinge_pin.step | 3mm rod spanning the interleaved hinge knuckles |
+| closing_screw.py | STEP/dog_bag_dispenser/closing_screw.step | The latch itself: a threaded screw with a real, printable helical thread |
+| dispenser_assembly.py | STEP/dog_bag_dispenser/dispenser_assembly.step | All four parts placed in their closed, assembled position |
+| build.py | src/dog_bag_dispenser/stl/*.stl | Rebuilds every model above and exports a fresh, committed STL per part |
+| viewer.json | (no output) | Per-part name/description/details/spec text for index.html's viewer -- edited by hand |
 
-Build everything: `python src/dispenser_assembly.py` from the project root.
-Checks: `python checks/check_dispenser.py` (topology, dimensions, dome
-sealing, and interference across all four parts — all pass with zero
-overlap volume, except the screw's deliberate self-tapping engagement with
-the tab, checked separately for being genuine but not excessive).
+Build everything: `python src/dog_bag_dispenser/build.py` from the repo
+root (or from anywhere -- it resolves its own paths). Checks:
+`python checks/check_dispenser.py` (topology, dimensions, dome sealing,
+and interference across all four parts — all pass with zero overlap
+volume, except the screw's deliberate self-tapping engagement with the
+tab, checked separately for being genuine but not excessive).
 
 Preview: `/index.html` at the repo root is an interactive STL viewer
-(three.js) checked into git -- clone the repo and open it directly in a
-browser, no server or build step needed, to view and download each part's
-`.stl`. It reads its mesh data from `src/stl/viewer_data.js` (a generated
-`<script src>`-loaded JS payload, not a `fetch()`, since local `fetch()`
-of a file is blocked under `file://`); the download links point straight
-at the real files alongside it in `src/stl/`. Regenerate both after any
-geometry change with `python scripts/build_viewer_bundle.py` (rebuilds
-this project's models, re-exports `src/stl/*.stl`, and rewrites
-`viewer_data.js`) -- `index.html`'s own part list is edited by hand in its
-`PROJECTS` array. Chromium snapshot rendering in this sandbox needs
+(three.js) checked into git, with a tab per project and a subtab per
+part -- clone the repo and open it directly in a browser, no server
+needed, to view and download each part's `.stl`. After running this
+project's `build.py`, run `python scripts/build_html.py` from the repo
+root to fold the fresh meshes (and this project's `viewer.json` text)
+into `/viewer_data.js`, which `index.html` reads via `<script src>`
+rather than `fetch()` (local `fetch()` is blocked under `file://`, a
+script load isn't). Chromium snapshot rendering in this sandbox needs
 `python3 scripts/snapshot_shim.py step snapshot ...` (env-specific
 `executable_path` + `CADGEN_DAEMON=0` workaround) rather than plain
 `cadgen step snapshot`.
