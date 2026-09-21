@@ -146,6 +146,7 @@
   .subtab-btn[aria-pressed="true"] {
     border-bottom-color: var(--accent);
     box-shadow: inset 0 0 0 1px var(--line);
+    max-width: 320px;
   }
   .subtab-btn[aria-pressed="true"] .name { color: var(--accent); }
   .subtab-btn .name {
@@ -158,10 +159,10 @@
     font-size: 11.5px;
     color: var(--ink-dim);
     line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: none;
+  }
+  .subtab-btn[aria-pressed="true"] .desc {
+    display: block;
   }
 
   .viewer-col {
