@@ -8,7 +8,7 @@ from lib.canister import (
     SCREW_MAJOR_D,
     SCREW_MINOR_D,
     SCREW_PITCH,
-    SCREW_THREAD_DEPTH,
+    SCREW_THREAD_CREST_W,
     SCREW_TIP_D,
     SCREW_TIP_ENGAGE,
     TAB_THK,
@@ -27,8 +27,9 @@ SCREW_LENGTH = TIP_LEN + THREAD_LEN + SCREW_HEAD_H
 def _threaded_shank(z0: float, length: float) -> bd.Shape:
     """A cylinder at the thread's minor (root) diameter, with a real
     helical rib swept onto it at the major diameter -- coarse (2mm pitch,
-    triangular profile), matching what prints reliably at this scale
-    rather than a fine, accurate V-thread.
+    trapezoidal profile with a flat crest, not a knife edge), matching
+    what prints reliably at this scale rather than a fine, accurate
+    V-thread.
     """
     core_r = SCREW_MINOR_D / 2.0
     crest_r = SCREW_MAJOR_D / 2.0
@@ -38,9 +39,10 @@ def _threaded_shank(z0: float, length: float) -> bd.Shape:
     with bd.BuildSketch(bd.Plane.XZ) as prof:
         with bd.BuildLine():
             p0 = (core_r, -SCREW_PITCH / 4.0)
-            p1 = (crest_r, 0.0)
-            p2 = (core_r, SCREW_PITCH / 4.0)
-            bd.Polyline(p0, p1, p2, p0)
+            p1 = (crest_r, -SCREW_THREAD_CREST_W / 2.0)
+            p2 = (crest_r, SCREW_THREAD_CREST_W / 2.0)
+            p3 = (core_r, SCREW_PITCH / 4.0)
+            bd.Polyline(p0, p1, p2, p3, p0)
         bd.make_face()
     rib = bd.sweep(prof.sketch, path=helix, is_frenet=False)
 

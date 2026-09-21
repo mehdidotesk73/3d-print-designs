@@ -109,6 +109,9 @@ LATCH_WIDTH = 14.0  # Z extent of the whole tab/screw assembly
 SCREW_MAJOR_D = 5.0
 SCREW_PITCH = 2.0
 SCREW_THREAD_DEPTH = 0.7
+SCREW_THREAD_CREST_W = 0.5  # trapezoidal profile: width of the thread's flat crest, not a knife edge --
+# FDM can't reliably resolve a true point at this depth (it just rounds over anyway), and a flat crest
+# isn't a stress-concentration point right where the thread takes load while self-tapping in
 SCREW_MINOR_D = SCREW_MAJOR_D - 2.0 * SCREW_THREAD_DEPTH
 SCREW_HEAD_D = 9.0
 SCREW_HEAD_H = 3.0
