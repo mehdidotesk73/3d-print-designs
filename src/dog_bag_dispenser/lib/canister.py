@@ -115,7 +115,9 @@ SCREW_THREAD_CREST_W = 0.5  # trapezoidal profile: width of the thread's flat cr
 SCREW_MINOR_D = SCREW_MAJOR_D - 2.0 * SCREW_THREAD_DEPTH
 SCREW_HEAD_D = 9.0
 SCREW_HEAD_H = 3.0
-SCREW_TIP_D = 3.2  # smooth pilot below the threads -- registers in back's clearance bore
+SCREW_TIP_D = SCREW_MINOR_D  # smooth pilot below the threads -- same diameter as the thread's own
+# core, so the shaft reads as one uniform cylinder (aside from the thread and head) rather than
+# stepping down at the tip; registers in back's clearance bore
 SCREW_TIP_ENGAGE = 2.5  # how deep the tip seats into back's bore -- short of WALL, so it
 # stays clear of poking out into the cavity
 
