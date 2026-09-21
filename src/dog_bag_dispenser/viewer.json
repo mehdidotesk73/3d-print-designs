@@ -48,14 +48,14 @@
     {
       "id": "pin",
       "name": "Hinge pin",
-      "description": "3mm rod through the interleaved knuckle row, on a pivot offset from the parting edge by the pin bore radius. A retention flange near one end catches against the first knuckle, so the pin can't be pushed or shaken all the way through and out the far side.",
+      "description": "3mm rod through the interleaved knuckle row, on a pivot offset from the parting edge by the pin bore radius. A D-shaped retention flange near one end catches against the first knuckle, so the pin can't be pushed or shaken all the way through and out the far side.",
       "spec": "Ø3 × 57.25mm",
       "color": "0xc2c8d1",
       "stl": "hinge_pin.stl",
       "details": [
         "Diameter 3.0mm",
         "Length 57.25mm",
-        "Ø5 x 1mm retention flange near the bottom end -- slides in from the open (headless) end"
+        "Ø5 x 1mm flange near the bottom end, cut flush with the shaft on its inward side -- slides in from the open (headless) end"
       ]
     },
     {

@@ -110,18 +110,30 @@ filleted via `reinforce_hinge()`. A single continuous pin bore spans the
 whole hinge, open to free air past both ends of the knuckle row.
 
 **Pin** (`hinge_pin.py`): a plain `PIN_D` rod matching the bore's own
-span, plus a retention **flange** (`PIN_HEAD_D`/`PIN_HEAD_H`) near its
-bottom end -- wide enough that it can never enter the knuckle bore, so it
-catches the pin from being pushed or shaken all the way through and out
-the far side. Its outer face sits flush with `HINGE_Z_MIN`, right where
-the first knuckle's own solid material begins, and it stays *within* the
-shaft's own existing overhang length rather than reaching past it: this
-close to the tube's domed end, any feature wider than the plain shaft
-starts intersecting the dome's own curved shell if it reaches too far
-past `HINGE_Z_MIN` (the dome cap's radius from the tube's central axis
-narrows quickly here, tighter than it looks from the knuckle row's own,
-narrower radial reach). The pin's other end stays plain -- that's the end
-you slide it in from.
+span, plus a retention **flange** (`PIN_HEAD_D`/`PIN_HEAD_H`, built by
+`_flange_profile()`) near its bottom end -- wide enough on its outward
+side that it can never enter the knuckle bore, so it catches the pin from
+being pushed or shaken all the way through and out the far side. It
+installs by bringing the two leaves together with their knuckles
+interleaved, then sliding the pin in plain-end first; the flange never
+has to pass through the bore itself (it's wider than the bore everywhere
+except its own cut side), it just rides in the open overhang past the
+bore's own constrained section until it meets the first knuckle's real
+material and can go no further.
+
+The flange isn't a plain circle: the side facing the tube's own central
+axis is cut off by a plane tangent to the shaft's own outer surface (a
+"D" shape, not a disc) -- that's exactly the side that would otherwise
+intersect the dome cap's own curved shell this close to the tube's end
+(the dome's radius from the tube's central axis narrows quickly here,
+tighter than it looks from the knuckle row's own, narrower radial reach).
+The outward side has no such limit, since moving away from the tube's
+axis only ever increases distance from the dome's own center, however
+close to the tube's very end you get -- so cutting just the one risky
+side, rather than shrinking the whole disc, keeps the flange's outward
+reach (what actually does the catching) as generous as a full circle's
+own radius, with real margin to spare. The pin's other end stays plain --
+that's the end you slide it in from.
 
 ## Latch
 
