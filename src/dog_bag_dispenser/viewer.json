@@ -42,33 +42,33 @@
       "details": [
         "3 full-round hinge knuckles, filleted into the OD on their near side",
         "Slit 12mm wide × 40mm long",
-        "Tab resting against back's own wall, with a threaded screw fastening hole"
+        "Tab resting against back's own wall, with a genuinely threaded screw fastening hole (cut by an oversized thread-maker, not a self-tapping pilot hole)"
       ]
     },
     {
       "id": "pin",
       "name": "Hinge pin",
-      "description": "3mm rod through the interleaved knuckle row, on a pivot offset from the parting edge by the pin bore radius.",
+      "description": "3mm rod through the interleaved knuckle row, on a pivot offset from the parting edge by the pin bore radius. A retention flange near one end catches against the first knuckle, so the pin can't be pushed or shaken all the way through and out the far side.",
       "spec": "Ø3 × 57.25mm",
       "color": "0xc2c8d1",
       "stl": "hinge_pin.stl",
       "details": [
         "Diameter 3.0mm",
         "Length 57.25mm",
-        "Slides in after assembly -- bore opens to free air past both ends of the knuckle row"
+        "Ø5 x 1mm retention flange near the bottom end -- slides in from the open (headless) end"
       ]
     },
     {
       "id": "screw",
       "name": "Closing screw",
-      "description": "The whole latch: self-taps into the tab's threaded screw fastening hole (rigid with front), while its smooth tip rests with clearance inside a plain bore through back's own wall -- not fastened there at all. Front's latch edge opens by rotating about the far hinge, so its motion here is mostly tangential, not a straight pull; the bore's own side wall blocks that tangential slide, acting like a dowel pin spanning the joint.",
+      "description": "The whole latch: threads into the tab's genuinely threaded screw fastening hole (rigid with front), while its smooth tip rests with clearance inside a plain bore through back's own wall -- not fastened there at all. Front's latch edge opens by rotating about the far hinge, so its motion here is mostly tangential, not a straight pull; the bore's own side wall blocks that tangential slide, acting like a dowel pin spanning the joint.",
       "spec": "Ø5 coarse thread",
       "color": "0x8fae7a",
       "stl": "closing_screw.stl",
       "details": [
-        "Real printable helical thread, 2mm pitch",
+        "Real printable helical thread, 2mm pitch, trapezoidal flat-crest profile",
         "Smooth tip seats with clearance in back's plain wall bore",
-        "Self-tapping into the tab's slightly undersized screw fastening hole"
+        "Turns into the tab's own real internal thread -- a true clearance fit, not self-tapping"
       ]
     }
   ]

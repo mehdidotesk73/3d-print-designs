@@ -25,7 +25,6 @@ from lib.canister import (  # noqa: E402
     BACK_BORE_X0,
     BACK_KNUCKLE_SEGMENTS,
     END_MARGIN,
-    FASTENING_HOLE_D,
     FRONT_KNUCKLE_SEGMENTS,
     HINGE_AXIS_X,
     HINGE_Z_MAX,
@@ -40,6 +39,8 @@ from lib.canister import (  # noqa: E402
     MOUNT_Z,
     PIN_BORE_Z0,
     PIN_BORE_Z1,
+    PIN_HEAD_D,
+    PIN_HEAD_H,
     PIN_R,
     R_IN,
     R_OUT,
@@ -55,6 +56,9 @@ from lib.canister import (  # noqa: E402
     TAB_OUTER_X,
     TAB_ROOT_INNER_X,
     TAB_Y_DEPTH,
+    THREADMAKER_CREST_W_GROWTH,
+    THREADMAKER_SHAFT_CLEARANCE,
+    THREADMAKER_THREAD_CLEARANCE,
     WALL,
 )
 
@@ -276,28 +280,39 @@ def main() -> None:
         f"overlap volume = {screw_overlap_pin:.6f} mm^3",
     )
 
-    # Screw vs front is the ONE deliberate exception to zero interference:
-    # the tab's own screw fastening hole (FASTENING_HOLE_D) is undersized
-    # against the screw's own thread (self-tapping, the common approach for
-    # a small FDM-printed fastener -- the screw cuts its own channel on
-    # first insertion, rather than modeling a separate matching internal
-    # thread and hoping the two meshes clear each other at print
-    # tolerance). A real screw-boss self-tap always has *some* calculated
-    # interference by design; check it's genuinely engaged (not
-    # accidentally zero, which would mean the hole isn't actually
-    # undersized) without being absurdly large (which would mean the
-    # fastening hole is misconfigured).
+    # Screw vs front: a genuine clearance fit now -- the tab's fastening
+    # hole is cut by a THREAD-MAKER, an oversized copy of the screw's own
+    # helix (see latch_tab_fastening_hole() in lib/canister.py), not a
+    # self-tapping pilot hole undersized against the screw's own thread.
+    # Two printed plastic parts don't cut into each other the way a metal
+    # screw cuts into wood or sheet metal, so this joins every other pair
+    # at zero interference -- no more deliberate overlap to carve an
+    # exception for.
     screw_overlap_front = overlap_volume(screw_solid, front_solid)
     check(
-        "screw vs front: genuine self-tapping engagement (not zero, not excessive)",
-        1.0 < screw_overlap_front < 50.0,
-        f"overlap volume = {screw_overlap_front:.6f} mm^3 (expected: real but modest -- "
-        f"the fastening hole is undersized on purpose)",
+        "screw vs front interference (clearance-fit thread, not self-tapping)",
+        screw_overlap_front < 0.01,
+        f"overlap volume = {screw_overlap_front:.6f} mm^3",
     )
     check(
-        "tab's fastening hole is undersized against the screw's minor diameter (enables self-tapping)",
-        FASTENING_HOLE_D < SCREW_MINOR_D,
-        f"FASTENING_HOLE_D={FASTENING_HOLE_D} mm < SCREW_MINOR_D={SCREW_MINOR_D} mm",
+        "thread-maker clearances are positive (a real oversize, not accidentally shrunk or reversed)",
+        THREADMAKER_SHAFT_CLEARANCE > 0.0
+        and THREADMAKER_THREAD_CLEARANCE > 0.0
+        and THREADMAKER_CREST_W_GROWTH > 0.0,
+        f"shaft={THREADMAKER_SHAFT_CLEARANCE} mm, thread={THREADMAKER_THREAD_CLEARANCE} mm, "
+        f"crest_w={THREADMAKER_CREST_W_GROWTH} mm",
+    )
+    # A direct regression probe for the enlargement itself: at the old
+    # self-tapping pilot hole's own radius (SCREW_MINOR_D/2 - 0.1, offset
+    # off-axis so it isn't trivially empty regardless of hole size), the
+    # tab used to be solid material; now that the hole is cut by the
+    # larger thread-maker, it must read empty.
+    old_pilot_r = SCREW_MINOR_D / 2.0 - 0.1
+    enlarged_hole_pt = ((TAB_OUTER_X + TAB_INNER_X) / 2.0, LATCH_HOLE_Y, LATCH_HOLE_Z + old_pilot_r)
+    check(
+        "tab's hole is genuinely enlarged past the old self-tapping pilot radius",
+        not front_solid.is_inside(enlarged_hole_pt),
+        f"point {enlarged_hole_pt} inside front = {front_solid.is_inside(enlarged_hole_pt)} (expect False)",
     )
 
     # Pin length vs hinge knuckle span, and clear of the domed ends
@@ -308,6 +323,30 @@ def main() -> None:
         "pin length covers knuckle span",
         pin_len >= knuckle_span,
         f"pin length={pin_len:.3f} mm, knuckle span={knuckle_span:.3f} mm",
+    )
+
+    # Retention flange near the pin's bottom end: must be too wide to
+    # ever enter the knuckle bore (or it wouldn't catch anything), must
+    # actually be present as solid material (not a degenerate/empty
+    # build), and must stay contained within the shaft's own existing
+    # length -- reaching any further past HINGE_Z_MIN, this close to the
+    # domed tube end, runs into the dome's own curved shell (that's what
+    # the pin/back and pin/front interference checks above would catch).
+    check(
+        "pin flange is oversized past the knuckle bore (can't enter it)",
+        PIN_HEAD_D > 2.0 * PIN_R,
+        f"PIN_HEAD_D={PIN_HEAD_D} mm > bore diameter={2.0 * PIN_R} mm",
+    )
+    flange_probe = (HINGE_AXIS_X + (PIN_HEAD_D / 2.0 - 0.3), 0.0, HINGE_Z_MIN - PIN_HEAD_H / 2.0)
+    check(
+        "pin's retention flange is genuine solid material (built, not degenerate)",
+        pin_solid.is_inside(flange_probe),
+        f"point {flange_probe} inside pin = {pin_solid.is_inside(flange_probe)} (expect True)",
+    )
+    check(
+        "pin's overall length still matches the bore span (flange stays within it, not past it)",
+        abs(pin_len - (PIN_BORE_Z1 - PIN_BORE_Z0)) < 1e-6,
+        f"pin length={pin_len:.3f} mm, bore span={PIN_BORE_Z1 - PIN_BORE_Z0:.3f} mm",
     )
     check(
         "pin stays within END_MARGIN of the dome-capped ends",

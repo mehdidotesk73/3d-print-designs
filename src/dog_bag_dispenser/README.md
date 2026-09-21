@@ -33,8 +33,8 @@ Build everything: `python src/dog_bag_dispenser/build.py` from the repo
 root (or from anywhere -- it resolves its own paths). Checks:
 `python checks/check_dispenser.py` (topology, dimensions, dome sealing,
 and interference across all four parts — all pass with zero overlap
-volume, except the screw's deliberate self-tapping engagement with the
-tab, checked separately for being genuine but not excessive).
+volume, including the screw against the tab's own genuine internal
+thread).
 
 Preview: `/index.html` at the repo root is an interactive STL viewer
 (three.js) checked into git, with a tab per project and a subtab per
@@ -109,6 +109,20 @@ front gets 2,4...), each a full-round boss unioned onto its own leaf and
 filleted via `reinforce_hinge()`. A single continuous pin bore spans the
 whole hinge, open to free air past both ends of the knuckle row.
 
+**Pin** (`hinge_pin.py`): a plain `PIN_D` rod matching the bore's own
+span, plus a retention **flange** (`PIN_HEAD_D`/`PIN_HEAD_H`) near its
+bottom end -- wide enough that it can never enter the knuckle bore, so it
+catches the pin from being pushed or shaken all the way through and out
+the far side. Its outer face sits flush with `HINGE_Z_MIN`, right where
+the first knuckle's own solid material begins, and it stays *within* the
+shaft's own existing overhang length rather than reaching past it: this
+close to the tube's domed end, any feature wider than the plain shaft
+starts intersecting the dome's own curved shell if it reaches too far
+past `HINGE_Z_MIN` (the dome cap's radius from the tube's central axis
+narrows quickly here, tighter than it looks from the knuckle row's own,
+narrower radial reach). The pin's other end stays plain -- that's the end
+you slide it in from.
+
 ## Latch
 
 The dispenser closes with a single threaded screw (`closing_screw.py`) --
@@ -140,16 +154,10 @@ pin, and interleaved knuckle row) -- with the simplest mechanism yet: one
 screw doing the whole job, no raised features on either leaf.
 
 - **Tab**: an L-shaped cross-section -- a thin arm reaching out to rest
-  against back's own wall (clear of it by `LATCH_GAP`, which also gives
-  the screw thread's own natural start-of-sweep overshoot room to clear
-  back's wall around the bore's opening), widening into a root that embeds
-  `TAB_EMBED` past R_OUT into front's own wall where the arm meets it. Its
-  own fastening hole (`FASTENING_HOLE_D`) is deliberately *undersized*
-  against the screw's thread minor diameter (self-tapping): the screw cuts
-  its own channel on first insertion, the common, reliable approach for a
-  small FDM-printed fastener -- far more robust than modeling a matching
-  internal helical thread and hoping the two meshes clear each other at
-  print tolerance.
+  against back's own wall (clear of it by `LATCH_GAP`), widening into a
+  root that embeds `TAB_EMBED` past R_OUT into front's own wall where the
+  arm meets it. Its own fastening hole is a genuine internal thread, not a
+  self-tapping pilot hole -- see below.
 - **Back's bore**: a plain, unthreaded, oversized clearance bore straight
   through back's own wall (`BACK_BORE_D`, `BACK_BORE_DEPTH`) -- large
   enough that the screw's smooth tip can never bind or thread into it, and
@@ -157,21 +165,52 @@ screw doing the whole job, no raised features on either leaf.
   regardless of the wall's own curvature this close to the split line.
   `SCREW_TIP_ENGAGE` (how deep the tip seats) stays short of `WALL`, so the
   tip never pokes out into the cavity.
-- **Screw**: a real, printable helical thread (coarse, 2mm pitch --
-  fine V-threads don't print reliably at this scale), swept via
-  `Helix`+`sweep` onto a core cylinder at the thread's minor diameter, a
-  smooth pilot tip below it, and a head above for turning by hand.
+- **Screw**: a real, printable helical thread (coarse, 2mm pitch,
+  trapezoidal flat-crest profile -- fine V-threads, or a knife-edge crest,
+  don't print reliably at this scale), swept via `Helix`+`sweep`, a smooth
+  pilot tip below it (uniform with the thread's own core diameter, no
+  step), and a head above for turning by hand.
 
-Checks confirm zero interference between every part pair *except* the
-screw against the tab, which is checked separately for being a
-genuine, real self-tapping engagement (present and in a sane range) --
-not a bug, but the whole reason the latch holds. A dedicated check also
-cross-verifies the screw's actual assembled placement (its bounding box)
-against the tip-engagement formula in `dispenser_assembly.py`, since the
-placement math there has to measure engagement depth from back's real
-outer wall surface (-R_OUT), not from the bore's own oversized cutting
-margin -- getting that wrong would silently shift the whole screw (and its
-thread) off the tab despite every build step succeeding.
+**The tab's fastening hole is cut by a THREAD-MAKER** (`threaded_shank()`
+in `lib/canister.py`, shared with the real screw), not sized as a
+self-tapping pilot hole. Two printed plastic parts don't cut into each
+other the way a metal screw cuts into wood or sheet metal, and FDM's own
+layered, anisotropic strength makes that even less reliable -- so instead,
+`latch_tab_fastening_hole()` builds an oversized copy of the screw's own
+helix (same pitch, same profile shape, same handedness, via the same
+`threaded_shank()` function, just with the shaft, thread crest, and crest
+width each independently grown by a `THREADMAKER_*_CLEARANCE` constant,
+then unioned) and subtracts it from the tab. Because the thread-maker is
+strictly larger than the real screw at every point along that same helix,
+the resulting hole is a true internal thread with real clearance -- the
+screw turns freely into it, rather than being expected to cut its own way
+in.
+
+Getting the thread-maker's helix to actually line up with the real
+screw's took care on the placement math (both are placed with the exact
+same `rotate(-90, Y)` + translate used for the real screw in
+`dispenser_assembly.py`, so they share the same phase, not just the same
+pitch) and on where each one *starts*: a swept helix's start cap (an OCCT
+quirk, not a design feature) can flare slightly wider than the
+sweep's own steady-state cross-section, and since both the tab's own
+physical edge and the real screw's own thread start at the exact same
+world X, that flare landed right where the cut boundary mattered most,
+leaving a small residual overlap despite the thread-maker being oversized
+everywhere else. `THREADMAKER_START_PAD` fixes this by pushing the
+thread-maker's own start out past the tab's edge into the open `LATCH_GAP`
+air gap, so whatever the flare's exact shape is, it lands somewhere that
+cuts nothing rather than right at the tab's own boundary.
+
+Checks confirm zero interference across every part pair, including the
+screw against the tab -- no more self-tapping exception to carve out.
+Dedicated checks also cross-verify the screw's actual assembled placement
+(its bounding box) against the tip-engagement formula in
+`dispenser_assembly.py`, since the placement math there has to measure
+engagement depth from back's real outer wall surface (-R_OUT), not from
+the bore's own oversized cutting margin -- getting that wrong would
+silently shift the whole screw (and its thread) off the tab despite every
+build step succeeding -- and confirm the thread-maker's own clearances are
+genuinely positive (a real oversize, not accidentally shrunk or reversed).
 
 ## Dispensing slit
 

@@ -66,6 +66,22 @@ PIN_MARGIN = 1.0  # pin protrudes this far past the knuckle span on each end
 KNUCKLE_W = 8.0
 KNUCKLE_GAP = 1.25
 
+# A retention flange near the pin's own bottom end (see hinge_pin.py) --
+# plain and flat, well past the bore's own diameter so it can never enter
+# the bore itself. Its outer face sits flush with HINGE_Z_MIN, right
+# where the first knuckle boss's own solid material begins, so it
+# registers directly against real knuckle material; it stays within the
+# shaft's own existing length (the small PIN_MARGIN+0.5 overhang past
+# HINGE_Z_MIN, see PIN_BORE_Z0 below) rather than extending past it,
+# because that region is close enough to the domed end that a feature
+# any wider than the plain shaft starts intersecting the dome's own
+# curved shell if it reaches too far past HINGE_Z_MIN. This stops the pin
+# from being pushed (or shaken loose) all the way through and out the far
+# end. The pin's other end stays plain/headless, the end you slide it in
+# from.
+PIN_HEAD_D = 5.0
+PIN_HEAD_H = 1.0
+
 BACK_KNUCKLE_SEGMENTS, FRONT_KNUCKLE_SEGMENTS = _pack_alternating_segments(
     LENGTH, END_MARGIN, KNUCKLE_W, KNUCKLE_GAP
 )
@@ -82,12 +98,17 @@ MOUNT_BOSS_HEIGHT = 3.0
 _mount_usable = LENGTH - 2.0 * END_MARGIN
 MOUNT_Z = (END_MARGIN + _mount_usable * 0.25, END_MARGIN + _mount_usable * 0.75)
 
-# Closing latch (edge at X=-R_OUT): a screw self-taps into a threaded
-# SCREW FASTENING HOLE in front's TAB, then tightens until its smooth tip
-# advances into a plain, oversized clearance BORE straight through back's
-# own wall -- not threaded, not fastened there at all, just resting with
-# clearance. This alone resists the hinge opening: the screw is rigid with
-# front (fixed via the fastening thread), and its tip sits inside a
+# Closing latch (edge at X=-R_OUT): a screw threads into a genuinely
+# THREADED SCREW FASTENING HOLE in front's TAB (a real internal thread,
+# cut by an oversized copy of the screw's own helix -- see
+# latch_tab_fastening_hole() -- not a self-tapping pilot hole: two printed
+# plastic parts don't cut into each other the way a metal screw cuts into
+# wood or sheet metal, and FDM's own layered, anisotropic strength makes
+# that even less reliable), then tightens until its smooth tip advances
+# into a plain, oversized clearance BORE straight through back's own wall
+# -- not threaded, not fastened there at all, just resting with clearance.
+# This alone resists the hinge opening: the screw is rigid with front
+# (fixed via the real threaded engagement), and its tip sits inside a
 # snug-clearance hole in back, so the pair act like a dowel pin spanning
 # the joint. As front tries to rotate open about the main hinge, the latch
 # edge moves mostly TANGENTIALLY (not straight outward) -- and that's
@@ -111,10 +132,14 @@ SCREW_PITCH = 2.0
 SCREW_THREAD_DEPTH = 0.7
 SCREW_THREAD_CREST_W = 0.5  # trapezoidal profile: width of the thread's flat crest, not a knife edge --
 # FDM can't reliably resolve a true point at this depth (it just rounds over anyway), and a flat crest
-# isn't a stress-concentration point right where the thread takes load while self-tapping in
+# isn't a stress-concentration point right where the thread takes the tightening load
 SCREW_MINOR_D = SCREW_MAJOR_D - 2.0 * SCREW_THREAD_DEPTH
 SCREW_HEAD_D = 9.0
 SCREW_HEAD_H = 3.0
+SCREW_HEAD_GAP = 0.1  # tiny standoff between the thread's own end and the head -- without it, the
+# head's flat face sits exactly coincident with the tab's outer face, and OCCT's own boolean
+# tolerance on that exactly-touching pair of faces reports a small nonzero "overlap" (a few tenths of
+# a mm^3) that isn't a real design collision, just a numerical artifact of two faces meeting exactly
 SCREW_TIP_D = SCREW_MINOR_D  # smooth pilot below the threads -- same diameter as the thread's own
 # core, so the shaft reads as one uniform cylinder (aside from the thread and head) rather than
 # stepping down at the tip; registers in back's clearance bore
@@ -125,9 +150,26 @@ SCREW_TIP_ENGAGE = 2.5  # how deep the tip seats into back's bore -- short of WA
 # wall, widening into a root that embeds into front's own wall where it
 # meets it.
 TAB_THK = 5.0  # radial thickness -- matches the screw's threaded length
-FASTENING_HOLE_D = SCREW_MINOR_D - 0.2  # slightly undersized: the screw self-taps on first insertion,
-# the common, reliable approach for a small FDM-printed fastener -- far more robust than modeling a
-# matching internal helical thread and hoping the two meshes clear each other at print tolerance.
+
+# The tab's fastening hole is cut by a THREAD-MAKER: an oversized copy of
+# the real screw's own helix (same threaded_shank() profile below, same
+# pitch and handedness), unioned from an independently-scaled shaft and
+# thread, then subtracted from the tab. Because the thread-maker is
+# strictly larger than the real screw at every point along the same
+# helix, the resulting hole is a genuine internal thread the screw can
+# freely turn into, with real clearance -- not a hole sized by hoping the
+# screw's own thread will cut cleanly into plastic on insertion.
+THREADMAKER_SHAFT_CLEARANCE = 0.15  # added to the shaft's (core) radius -- keeps the screw's own smooth
+# core clear of the hole wall between thread engagements
+THREADMAKER_THREAD_CLEARANCE = 0.15  # added to the thread's own crest radius
+THREADMAKER_CREST_W_GROWTH = 0.3  # widens the cut thread's flat crest (and so its whole tooth) --
+# gives the screw's thread flanks room to turn without binding side-to-side against the cut channel
+THREADMAKER_START_PAD = 0.4  # extra length tacked onto the thread-maker's OWN start (see
+# latch_tab_fastening_hole()), pushing its own z=0 -- where a swept sweep's start cap can flare
+# slightly wider than its steady-state cross-section, an OCCT sweep quirk, not a design feature --
+# out past TAB_INNER_X into the open LATCH_GAP air gap, so that flare lands somewhere it cuts nothing
+# rather than right at the tab's own physical edge, where it would otherwise leave an undersized,
+# not-quite-enclosing bit of the cut right where the real screw's own thread also starts
 TAB_EMBED = 2.5  # the root's embed depth past R_OUT into front's own wall, past its own curvature
 TAB_Y_DEPTH = 8.0  # how far the tab's own arm reaches from the split line
 LATCH_GAP = 1.0  # clearance between the tab's inner face and back's own outer wall -- also gives
@@ -374,6 +416,32 @@ def _x_cylinder(radius: float, length: float, y: float, z: float, x0: float) -> 
     return bd.Pos(x0, y, z) * cyl
 
 
+def threaded_shank(core_r: float, crest_r: float, crest_w: float, length: float) -> bd.Shape:
+    """A cylinder at core_r with a trapezoidal helical rib (flat crest of
+    width crest_w) swept onto it at crest_r, pitch SCREW_PITCH. Local
+    frame: Z=0 base, +Z toward the head.
+
+    Shared by the real screw (closing_screw.py) and the tab's own
+    thread-cutting tool below -- building both from this one function,
+    with only the radii/width scaled up for the cutting tool, guarantees
+    the two describe the exact same helix (same pitch, same starting
+    phase, same handedness), not just two independently-drawn threads
+    that happen to be close.
+    """
+    core = bd.Cylinder(core_r, length, align=(bd.Align.CENTER, bd.Align.CENTER, bd.Align.MIN))
+    helix = bd.Helix(pitch=SCREW_PITCH, height=length, radius=core_r)
+    with bd.BuildSketch(bd.Plane.XZ) as prof:
+        with bd.BuildLine():
+            p0 = (core_r, -SCREW_PITCH / 4.0)
+            p1 = (crest_r, -crest_w / 2.0)
+            p2 = (crest_r, crest_w / 2.0)
+            p3 = (core_r, SCREW_PITCH / 4.0)
+            bd.Polyline(p0, p1, p2, p3, p0)
+        bd.make_face()
+    rib = bd.sweep(prof.sketch, path=helix, is_frenet=False)
+    return core + rib
+
+
 def latch_tab() -> bd.Shape:
     """Front's tab: a thin arm reaching to rest against back's own outer
     wall (clear of it by LATCH_GAP), plus a root that embeds into front's
@@ -399,9 +467,29 @@ def latch_tab() -> bd.Shape:
 
 
 def latch_tab_fastening_hole() -> bd.Shape:
-    """The tab's own threaded screw fastening hole -- see FASTENING_HOLE_D."""
-    return _x_cylinder(FASTENING_HOLE_D / 2.0, TAB_INNER_X - TAB_OUTER_X,
-                        LATCH_HOLE_Y, LATCH_HOLE_Z, TAB_OUTER_X)
+    """The tab's own threaded screw fastening hole -- cut by a
+    THREAD-MAKER, an oversized copy of the real screw's own helix (see
+    threaded_shank() and the THREADMAKER_* constants), so the result is a
+    genuine internal thread with real clearance for the screw to turn
+    into, not a self-tapping pilot hole.
+
+    Placed with the exact same rotate(-90, Y) + translate used to place
+    the real screw in dispenser_assembly.py (world_X(z) = x0 - z along
+    the rotated local Z). The thread-maker's own far end still lands
+    exactly at TAB_OUTER_X, but its own local Z=0 (its start) is pushed
+    THREADMAKER_START_PAD past TAB_INNER_X, out into the open LATCH_GAP
+    air gap -- see THREADMAKER_START_PAD -- rather than exactly at
+    TAB_INNER_X, where the real screw's own thread also starts.
+    """
+    length = (TAB_INNER_X - TAB_OUTER_X) + THREADMAKER_START_PAD
+    maker = threaded_shank(
+        SCREW_MINOR_D / 2.0 + THREADMAKER_SHAFT_CLEARANCE,
+        SCREW_MAJOR_D / 2.0 + THREADMAKER_THREAD_CLEARANCE,
+        SCREW_THREAD_CREST_W + THREADMAKER_CREST_W_GROWTH,
+        length,
+    )
+    maker = maker.rotate(bd.Axis.Y, -90.0)
+    return bd.Pos(TAB_INNER_X + THREADMAKER_START_PAD, LATCH_HOLE_Y, LATCH_HOLE_Z) * maker
 
 
 def latch_back_bore() -> bd.Shape:
